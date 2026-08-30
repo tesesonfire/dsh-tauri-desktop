@@ -1,0 +1,18 @@
+{
+  "id": "com.dsh-tauri.rightclick",
+  "name": "dsh-tauri-rightclick",
+  "version": "0.1.0",
+  "description": "右键菜单插件：为会话、工作区、正文、链接、输入框提供动态上下文菜单注册",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "menus", "title": "右键菜单", "icon": "menu" }
+    ],
+    "setting": [
+      { "key": "enableCopyLink", "type": "boolean", "default": true },
+      { "key": "enableArchive", "type": "boolean", "default": true }
+    ]
+  }
+}

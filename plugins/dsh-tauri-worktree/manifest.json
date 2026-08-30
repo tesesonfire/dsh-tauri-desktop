@@ -1,0 +1,24 @@
+{
+  "id": "com.dsh-tauri.worktree",
+  "name": "dsh-tauri-worktree",
+  "version": "0.1.0",
+  "description": "Git 工作区插件：为每个会话创建隔离的 Git Worktree，支持检出、归档与删除",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "git", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "worktrees", "title": "Worktree", "icon": "git" }
+    ],
+    "panel": [
+      { "id": "worktree-list", "title": "Worktree 列表" }
+    ],
+    "command": [
+      { "id": "create-worktree", "title": "创建 Worktree" }
+    ],
+    "setting": [
+      { "key": "repoPath", "type": "string", "default": "" },
+      { "key": "worktreeRoot", "type": "string", "default": "~/.dsh/worktrees" }
+    ]
+  }
+}

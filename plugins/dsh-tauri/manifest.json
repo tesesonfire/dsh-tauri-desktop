@@ -1,0 +1,23 @@
+{
+  "id": "com.dsh-tauri.core",
+  "name": "dsh-tauri",
+  "version": "0.1.0",
+  "description": "核心通信插件：为其他插件提供与 Tauri Rust 后端的 invoke 与 event 标准通道",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "bridge", "title": "通信桥", "icon": "puzzle" }
+    ],
+    "panel": [
+      { "id": "bridge-status", "title": "桥接状态" }
+    ],
+    "command": [
+      { "id": "ping", "title": "Ping 宿主" }
+    ],
+    "setting": [
+      { "key": "logInvocations", "type": "boolean", "default": false }
+    ]
+  }
+}

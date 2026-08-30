@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-tauri/dsh-tauri",
+  "version": "0.1.0",
+  "description": "dsh-tauri 核心通信插件：提供与 Tauri Rust 后端的 invoke/event 通道",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=iife --outfile=dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

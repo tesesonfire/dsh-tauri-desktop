@@ -1,0 +1,26 @@
+{
+  "id": "com.dsh-tauri.ui",
+  "name": "dsh-tauri-ui",
+  "version": "0.1.0",
+  "description": "UI 增强插件：主题管理（深色/浅色/系统）、CSS 变量注入，供其他插件读取颜色变量",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "appearance", "title": "外观", "icon": "panel" }
+    ],
+    "setting": [
+      { "key": "defaultTheme", "type": "select", "default": "system", "options": ["light", "dark", "system"] },
+      { "key": "accentColor", "type": "string", "default": "#4d6bfe" }
+    ],
+    "theme": {
+      "cssVariables": {
+        "--brand-accent": "#4d6bfe",
+        "--brand-success": "#22c55e",
+        "--brand-warning": "#f59e0b",
+        "--brand-danger": "#ef4444"
+      }
+    }
+  }
+}

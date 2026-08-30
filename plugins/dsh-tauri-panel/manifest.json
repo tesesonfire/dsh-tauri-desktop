@@ -1,0 +1,17 @@
+{
+  "id": "com.dsh-tauri.panel",
+  "name": "dsh-tauri-panel",
+  "version": "0.1.0",
+  "description": "面板协议插件：侧栏外壳管理、面板注册/切换/面板间通信协议",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "panels", "title": "面板", "icon": "panel" }
+    ],
+    "panel": [
+      { "id": "panel-manager", "title": "面板管理" }
+    ]
+  }
+}

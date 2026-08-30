@@ -1,0 +1,21 @@
+{
+  "id": "com.dsh-tauri.panel-extension",
+  "name": "dsh-tauri-panel-extension",
+  "version": "0.1.0",
+  "description": "扩展管理插件：Skills 与 MCP 服务器管理、技能仓库导入",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage", "network", "fs"],
+  "contributes": {
+    "sidebar": [
+      { "id": "extensions", "title": "扩展", "icon": "puzzle" }
+    ],
+    "panel": [
+      { "id": "skills", "title": "Skills" },
+      { "id": "mcp", "title": "MCP" }
+    ],
+    "command": [
+      { "id": "import-repo", "title": "导入技能仓库" }
+    ]
+  }
+}

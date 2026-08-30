@@ -1,0 +1,17 @@
+{
+  "id": "com.dsh-tauri.session",
+  "name": "dsh-tauri-session",
+  "version": "0.1.0",
+  "description": "会话管理插件：删除工作区改为归档；已归档聊天支持搜索、排序、分组、项目筛选与取消归档",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "archived", "title": "归档聊天", "icon": "archive" }
+    ],
+    "panel": [
+      { "id": "archive-list", "title": "归档列表" }
+    ]
+  }
+}
