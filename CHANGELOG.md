@@ -7,6 +7,11 @@
 ## [Unreleased]
 
 ### Fixed
+- **【安全】zip-slip 防御被绕过**：`extract_zip` 仅用 `Path::starts_with`
+  检查条目路径，但该比较按组件进行、不解析 `..`，`dest.join("../x")`
+  可通过检查并把文件写到目标目录之外（影响市场插件 zipball 安装与
+  核心安装的解压路径）；现显式拒绝含 `..` 父目录组件的条目，
+  并新增真实 zip 构造的回归测试（修复前测试失败、修复后通过）
 - **App 根组件的第二次 `settingsGet`（启动窗口行为）缺少 catch**，
   `settings_get` 失败时产生未处理 rejection；现与路由判定一致静默降级
 - **下载进度估算缺陷**：服务器不支持断点续传（返回 200 覆盖 `.part`）时，
@@ -14,6 +19,11 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
+- **Markdown 消毒测试（4 项）**：内联 `<script>` 剥离、事件处理器与
+  `javascript:` 链接过滤（正常 https 链接保留）、iframe/object 嵌入剥离
+  —— 插件 README 与更新日志均为远端内容，注入面由此钉死
+- **归档解压安全/往返测试（+2）**：真实构造 zip 的 `../` 逃逸条目跳过、
+  tar.gz 嵌套目录完整还原
 - **自定义协议 URI 解析提取为纯函数**：`parse_plugin_uri`（Windows 的
   `http://dshplugin.localhost/` 形态与 macOS/Linux 的 `dshplugin://` 形态
   归一化、缺省 `index.html`、无关 URI 返回空 id）+ `mime_type` 静态资源
