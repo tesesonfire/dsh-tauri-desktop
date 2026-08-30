@@ -133,7 +133,7 @@ export default function PluginMarketPage(): React.ReactElement {
               </Badge>
               {plugin.builtin && <Badge>内置</Badge>}
               <div className="flex gap-1">
-                {plugin.manifest.permissions.map((perm) => (
+                {(plugin.manifest.permissions ?? []).map((perm) => (
                   <Badge key={perm} variant="warn">
                     {perm}
                   </Badge>

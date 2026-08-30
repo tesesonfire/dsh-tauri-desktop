@@ -7,6 +7,12 @@
 ## [Unreleased]
 
 ### Added
+- **ProfileManagerPage 测试（4 项）**：档案列表与「当前」徽标、
+  按名称+端口创建、导出调用参数与删除确认链路、导入路径输入与刷新
+- **lifecycle 集成测试扩展档案导入/导出**：真实文件导出、同名导入拒绝、
+  改名导入后隔离目录重建、删除清理隔离目录与二次删除 NotFound
+- **市场页详情视图测试（+2）**：README Markdown 渲染与返回市场、
+  README 缺失时的占位文案
 - **PluginHost 组件测试（5 项）**：iframe 协议 URL 与沙箱/桥标记、
   禁用态与后端错误详情、加载失败覆盖层重试、多实例桥标记唯一性
 - **市场页社区搜索测试（+2）**：GitHub 搜索结果渲染（star/仓库名）、
@@ -85,6 +91,7 @@
   （`pluginList`/`profileList` 返回 undefined 时按空列表处理，不再崩溃）
 - **PluginHost 加载失败检测改为原生 error 监听**：React 合成 onError
   对 iframe 在 jsdom/部分 WebView 中不触发，原生监听更可靠
+- 市场页详情视图权限徽标渲染对缺失 `permissions` 字段做防御
 - TROUBLESHOOTING 新增插件市场类与 e2e/WebDriver 排错章节
 - 预设卡片按 `pluginId` 映射到真实插件（此前误用预设 id 匹配 manifest.id）
 - `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）

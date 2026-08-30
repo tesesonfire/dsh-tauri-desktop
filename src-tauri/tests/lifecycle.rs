@@ -10,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use dsh_tauri_desktop::models::settings::AppSettings;
-use dsh_tauri_desktop::services::plugin_service;
+use dsh_tauri_desktop::services::{plugin_service, profile_service};
 use dsh_tauri_desktop::utils::path;
 
 /// 构造一个最小合法插件目录（manifest + entry + README）。
@@ -110,6 +110,46 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
         dsh_tauri_desktop::services::plugin_service::install_from_path(&bad).is_err(),
         "非法 manifest（坏 id + 坏版本）必须被拒绝"
     );
+
+    // ---------- 场景 5b：档案导入 / 导出（真实文件往返） ----------
+    let created = profile_service::create("it-profile", 4000).expect("create profile");
+    assert!(PathBuf::from(&created.dsh_home).exists(), "隔离目录应已建立");
+
+    // 导出：写入 JSON 文件（含隔离目录路径与端口）
+    let export_file = tmp.path().join("exports").join("it-profile.json");
+    profile_service::export("it-profile", &export_file).expect("export");
+    let exported_raw = fs::read_to_string(&export_file).expect("read export");
+    assert!(exported_raw.contains("it-profile"));
+    assert!(exported_raw.contains("4000"));
+
+    // 导入到新档案（换名），隔离目录重新生成
+    let imported = profile_service::import(&export_file).is_err(); // 同名 id 应拒绝
+    assert!(imported, "同名档案重复导入必须被拒绝");
+    // 改名后再导入
+    let renamed = export_file
+        .parent()
+        .map(|p| p.join("renamed.json"))
+        .expect("parent");
+    fs::write(
+        &renamed,
+        exported_raw.replace("\"it-profile\"", "\"it-profile-2\""),
+    )
+    .expect("write renamed");
+    let imported_profile = profile_service::import(&renamed).expect("import renamed");
+    assert_eq!(imported_profile.id, "it-profile-2");
+    assert_eq!(imported_profile.default_port, 4000);
+    assert!(
+        PathBuf::from(&imported_profile.dsh_home).exists(),
+        "导入档案的隔离目录应已建立"
+    );
+
+    // 删除：目录一并清理；再次删除报 NotFound
+    profile_service::delete("it-profile").expect("delete");
+    assert!(
+        !PathBuf::from(&created.dsh_home).exists(),
+        "删除后隔离目录应清理"
+    );
+    assert!(profile_service::delete("it-profile").is_err(), "重复删除应 NotFound");
 
     // ---------- 恢复环境 ----------
     match previous {

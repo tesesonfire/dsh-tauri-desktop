@@ -30,24 +30,30 @@ const registryEntry: MarketPlugin = {
 };
 
 function seedPlugins(list: Partial<PluginInfo>[]): void {
-  const plugins = list.map((p) => ({
-    manifest: {
-      id: "x",
-      name: "X",
-      version: "0.1.0",
-      description: "",
-      author: "",
-      entry: "index.html",
-      permissions: [],
-      contributes: { sidebar: [], panel: [], command: [], setting: [] },
-      ...p.manifest,
-    },
-    dir: "",
-    enabled: true,
-    builtin: true,
-    error: null,
-    ...p,
-  })) as PluginInfo[];
+  const plugins = list.map((p) => {
+    const base = {
+      manifest: {
+        id: "x",
+        name: "X",
+        version: "0.1.0",
+        description: "",
+        author: "",
+        entry: "index.html",
+        permissions: [],
+        contributes: { sidebar: [], panel: [], command: [], setting: [] },
+      },
+      dir: "",
+      enabled: true,
+      builtin: true,
+      error: null,
+    };
+    // 注意合并顺序：外层覆盖在前，manifest 需再与基底合并，保证字段完整
+    return {
+      ...base,
+      ...p,
+      manifest: { ...base.manifest, ...(p.manifest ?? {}) },
+    };
+  }) as PluginInfo[];
   usePluginStore.setState({ plugins });
   // 页面挂载即 refresh()，pluginList 结果会覆盖 store 预置，需保持一致
   serviceMock("pluginList").mockResolvedValue(plugins);
@@ -177,5 +183,40 @@ describe("PluginMarketPage", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "预设" }));
     await waitFor(() => expect(screen.getByText("已内置")).toBeTruthy());
     expect(screen.getByRole("button", { name: "详情" })).toBeTruthy();
+  });
+
+  it("detail view renders README markdown and returns to the market", async () => {
+    seedPlugins([
+      { manifest: { id: "com.dsh-tauri.panel", name: "DSH Tauri Panel", version: "0.1.0" } as never },
+    ]);
+    serviceMock("pluginReadme").mockResolvedValue("# Panel\n\n面板宿主使用说明。");
+    render(<PluginMarketPage />);
+    await waitFor(() => expect(screen.getByText("DSH Tauri Panel")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    // README 以 Markdown 渲染（标题成为 h1）
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Panel" }),
+      ).toBeTruthy(),
+    );
+    expect(screen.getByText(/面板宿主使用说明/)).toBeTruthy();
+    // 返回市场
+    fireEvent.click(screen.getByRole("button", { name: /返回市场/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "官方插件" })).toBeTruthy(),
+    );
+  });
+
+  it("detail view shows fallback text when README is missing", async () => {
+    seedPlugins([
+      { manifest: { id: "com.dsh-tauri.panel", name: "DSH Tauri Panel", version: "0.1.0" } as never },
+    ]);
+    serviceMock("pluginReadme").mockRejectedValue(new Error("[plugin_readme] 无 README"));
+    render(<PluginMarketPage />);
+    await waitFor(() => expect(screen.getByText("DSH Tauri Panel")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    await waitFor(() =>
+      expect(screen.getByText(/暂无 README/)).toBeTruthy(),
+    );
   });
 });
