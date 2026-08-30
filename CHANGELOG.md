@@ -7,6 +7,9 @@
 ## [Unreleased]
 
 ### Added
+- **CoreManagerPanel / PluginList / UpdatePanel 测试（8 项）**：已装/远端
+  版本展示与切换/删除/安装调用、插件列表启用开关与卸载、更新检查
+  「已最新」Toast 与更新日志渲染（经 toastStore 断言）
 - **ProfileManagerPage 测试（4 项）**：档案列表与「当前」徽标、
   按名称+端口创建、导出调用参数与删除确认链路、导入路径输入与刷新
 - **lifecycle 集成测试扩展档案导入/导出**：真实文件导出、同名导入拒绝、
@@ -85,6 +88,8 @@
 
 ### Changed
 - `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
+- README 功能清单与测试分层说明同步（8 个内置插件、市场、面板坞、
+  过期提醒、三层测试覆盖）
 - DshFrame 状态空值防御：`dsh_status` 返回 undefined（契约漂移/异常）时
   按「服务未启动」渲染而非崩溃（MainPage 集成测试暴露）
 - pluginStore/profileStore 的 refresh 对空响应做归一化

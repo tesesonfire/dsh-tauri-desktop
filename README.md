@@ -10,10 +10,10 @@
 ## ✨ 功能
 
 - **窗口与外壳** — 自定义标题栏（macOS 交通灯 / Windows 控制按钮自适应）、多窗口、窗口状态持久化、系统托盘（最小化到托盘、状态菜单）、启动画面
-- **内嵌 dsh WebUI** — iframe 加载 `http://127.0.0.1:3080`，加载骨架、断连自动重试（指数退避）、5 秒心跳检测、服务未启动时一键启动 + 实时日志
-- **dsh 核心集成** — 环境自检（Node ≥ 18 / dsh 安装检测）、进程生命周期（启动/停止/重启）、崩溃自动恢复（≤5 次退避重启）、多版本核心管理、档案（Profile）隔离
-- **插件系统** — Cordis 风格 manifest 规范、iframe 隔离 + postMessage 桥接、权限白名单（fs/exec/git/network/ui/storage/notification）、插件市场
-- **7 个内置插件** — dsh-tauri（通信）、dsh-tauri-ui（主题）、dsh-tauri-worktree（Git Worktree）、dsh-tauri-panel（面板协议）、dsh-tauri-panel-extension（Skills/MCP）、dsh-tauri-session（会话归档）、dsh-tauri-rightclick（右键菜单）
+- **内嵌 dsh WebUI** — iframe 加载 `http://127.0.0.1:3080`，加载骨架、断连自动重试（指数退避）、5 秒心跳检测、服务未启动时一键启动 + 实时日志（级别过滤 + 关键字搜索）
+- **dsh 核心集成** — 环境自检（Node ≥ 18 / dsh 安装检测）、进程生命周期（启动/停止/重启）、崩溃自动恢复（≤5 次退避重启）、多版本核心管理、核心过期提醒（启动时对比远端最新版，离线静默保留本地）、CLI 全局安装的 dsh 自动优先、档案（Profile）隔离
+- **插件系统** — Cordis 风格 manifest 规范、iframe 隔离 + postMessage 桥接、权限白名单（fs/exec/git/network/ui/storage/notification）、插件市场（官方注册表 + GitHub 社区搜索 + zipball 一键安装/升级）、右侧插件面板坞
+- **8 个内置插件** — dsh-tauri（通信）、dsh-tauri-ui（主题）、dsh-tauri-worktree（Git Worktree）、dsh-tauri-panel（面板协议）、dsh-tauri-panel-extension（Skills/MCP）、dsh-tauri-session（会话归档）、dsh-tauri-rightclick（右键菜单）、dsh-tauri-notification（状态通知）
 - **命令行集成** — 注册 `dsh` shim 到 PATH（Windows 注册表 / macOS/Linux shell 追加）
 - **应用自更新** — GitHub Releases 检查、下载进度、SHA256 校验、更新日志 Markdown 渲染
 
@@ -82,10 +82,17 @@ pnpm tauri dev        # 开发模式（Rust + Vite 热更新）
 ```bash
 pnpm test                 # 前端 + 插件单元测试（Vitest）
 pnpm test:coverage        # 覆盖率报告（coverage/）
-cd src-tauri && cargo test   # Rust 单元测试
+cd src-tauri && cargo test   # Rust 单元 + 服务层集成测试
 pnpm lint                 # ESLint
 cd src-tauri && cargo clippy # Rust lint
 ```
+
+分层覆盖（160+ 前端用例、70+ Rust 用例）：
+- **Rust 单元测试**：纯函数与权限边界（版本比较、平台匹配、白名单路径、桥接白名单）
+- **Rust 集成测试**（`src-tauri/tests/lifecycle.rs`）：临时 `DSH_HOME` 下走真实服务栈
+  （插件安装/卸载、档案导入导出、设置持久化）
+- **WebDriver e2e**（`src-tauri/tests/webdriver_e2e.rs`，`DSH_E2E=1` 按需启用）：
+  真实窗口场景，见 [tests/e2e/README.md](tests/e2e/README.md) 的场景清单与覆盖进度
 
 CI（`.github/workflows/ci.yml`）在三个平台运行 lint + 类型检查 + 全部测试；
 Release 工作流在 tag 推送时构建 NSIS / DMG (Universal) / AppImage + deb 并发布。
