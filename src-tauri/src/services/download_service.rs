@@ -96,6 +96,26 @@ impl DownloadManager {
     }
 }
 
+/// 断点续传计划：`.part` 存在且服务器返回 206 时从已下载字节续传，否则从头写。
+/// 返回 (起始偏移, 是否追加写入)。
+fn resume_plan(part_size: u64, status: u16) -> (u64, bool) {
+    match (part_size > 0, status == 206) {
+        (true, true) => (part_size, true),
+        _ => (0, false),
+    }
+}
+
+/// 全量大小估算：206 续传时总长 = 已有 `.part` + 本次范围长度；
+/// 200 重下时总长 = 本次响应长度（此前实现误把废弃 `.part` 大小计入，
+/// 导致进度条短暂超过 100%）。
+fn total_size(part_size: u64, status: u16, content_length: Option<u64>) -> Option<u64> {
+    match content_length {
+        None => None,
+        Some(len) if status == 206 && part_size > 0 => Some(part_size + len),
+        Some(len) => Some(len),
+    }
+}
+
 /// 下载执行体：断点续传（.part 文件 + Range 头）、200ms 节流的进度事件。
 async fn run_download(
     app: &tauri::AppHandle,
@@ -110,15 +130,16 @@ async fn run_download(
     let part_file = dest.with_extension("part");
 
     // 断点续传：已有 .part 文件则从其大小继续
-    let mut downloaded: u64 = 0;
-    if part_file.exists() {
-        downloaded = std::fs::metadata(&part_file).map(|m| m.len()).unwrap_or(0);
-    }
+    let part_size: u64 = if part_file.exists() {
+        std::fs::metadata(&part_file).map(|m| m.len()).unwrap_or(0)
+    } else {
+        0
+    };
 
     let client = crate::services::workflow_service::http_client();
     let mut request = client.get(&url).timeout(std::time::Duration::from_secs(30));
-    if downloaded > 0 {
-        request = request.header("Range", format!("bytes={downloaded}-"));
+    if part_size > 0 {
+        request = request.header("Range", format!("bytes={part_size}-"));
     }
     let response = request.send().await?;
     if !response.status().is_success() {
@@ -127,16 +148,13 @@ async fn run_download(
             response.status()
         )));
     }
-    let total: Option<u64> = response.content_length().map(|len| len + downloaded);
+    let status = response.status().as_u16();
+    let (mut downloaded, append) = resume_plan(part_size, status);
+    let total: Option<u64> = total_size(part_size, status, response.content_length());
 
-    let mut file = if downloaded > 0 && response.status().as_u16() == 206 {
-        // 服务器支持断点续传（206 Partial Content）
-        std::fs::OpenOptions::new()
-            .append(true)
-            .open(&part_file)?
+    let mut file = if append {
+        std::fs::OpenOptions::new().append(true).open(&part_file)?
     } else {
-        // 不支持续传则从头下载
-        downloaded = 0;
         std::fs::File::create(&part_file)?
     };
 
@@ -260,5 +278,27 @@ mod tests {
         let json = serde_json::to_string(&progress).expect("json");
         assert!(json.contains("\"speedBps\""));
         assert!(json.contains("\"total\":1000"));
+    }
+
+    #[test]
+    fn resume_plan_appends_only_with_part_and_206() {
+        // 有 .part 且服务器支持 Range → 从 part 大小续传
+        assert_eq!(resume_plan(1024, 206), (1024, true));
+        // 无 .part → 从头
+        assert_eq!(resume_plan(0, 206), (0, false));
+        // 服务器不支持 Range（200 覆盖）→ 从头
+        assert_eq!(resume_plan(1024, 200), (0, false));
+        // 重定向等其他成功码一律不追加
+        assert_eq!(resume_plan(1024, 302), (0, false));
+    }
+
+    #[test]
+    fn total_size_counts_part_only_when_resuming() {
+        // 206：part + 本次范围
+        assert_eq!(total_size(1024, 206, Some(2048)), Some(3072));
+        // 200：废弃 part 不计入（此前实现会把进度推过 100%）
+        assert_eq!(total_size(1024, 200, Some(2048)), Some(2048));
+        // 未知总长保持 None
+        assert_eq!(total_size(1024, 206, None), None);
     }
 }

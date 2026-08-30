@@ -231,4 +231,38 @@ mod tests {
         assert_eq!(m.permissions.len(), 2);
         assert_eq!(m.contributes.sidebar.len(), 1);
     }
+
+    #[test]
+    fn permission_method_group_mapping_is_exhaustive() {
+        // 运行时按该映射放行桥接方法组，逐一钉住
+        use std::str::FromStr;
+        let cases = [
+            ("fs", Permission::Fs, "fs"),
+            ("exec", Permission::Exec, "exec"),
+            ("storage", Permission::Storage, "storage"),
+            ("git", Permission::Git, "git"),
+            ("network", Permission::Network, "http"),
+            ("http", Permission::Network, "http"),
+            ("ui", Permission::Ui, "ui"),
+            ("notification", Permission::Notification, "ui"),
+        ];
+        for (raw, parsed, group) in cases {
+            let permission = Permission::from_str(raw).unwrap_or_else(|_| panic!("parse {raw}"));
+            assert_eq!(permission, parsed, "raw {raw} 应解析为对应权限");
+            assert_eq!(permission.to_string(), group, "raw {raw} 的方法组");
+        }
+        // 未知权限被拒绝（manifest 解析时即报错）
+        assert!(Permission::from_str("root").is_err());
+        assert!(Permission::from_str("").is_err());
+    }
+
+    #[test]
+    fn permission_json_rejects_unknown_values() {
+        let raw = r#"{
+            "id": "com.example.y", "name": "Y", "version": "1.0.0",
+            "entry": "index.html", "permissions": ["kernel"]
+        }"#;
+        let parsed: Result<Manifest, _> = serde_json::from_str(raw);
+        assert!(parsed.is_err(), "未知权限必须在反序列化时被拒绝");
+    }
 }

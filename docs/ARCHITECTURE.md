@@ -116,6 +116,16 @@ sequenceDiagram
 | `presets_get` | – | `PresetsFile`（资源可远程替换） | – |
 | `window_*` (minimize/maximize/close/isMaximized) | – | – | – |
 
+### 3.1 后端事件一览（前端 `listen` 订阅）
+
+| 事件 | 负载 | 触发时机 |
+|---|---|---|
+| `dsh://log` | `LogLine { level, line, ts }` | dsh 子进程 stdout/stderr 逐行转发（同时落盘） |
+| `dsh://state` | `DshStatus` | dsh 状态迁移（启动/就绪/停止/崩溃/错误） |
+| `download://progress` | `DownloadProgress` | 下载任务每 200ms 节流推进（含失败/取消终态） |
+| `update://progress` | `UpdateProgress` | 自更新下载/校验/应用阶段推进 |
+| `core://outdated` | `{ current, latest }` | 启动时对比本地 CURRENT 与远端最新发行版，仅过期时触发；GitHub 不可达静默 |
+
 ## 4. 数据模型（核心结构）
 
 ```rust

@@ -6,7 +6,17 @@
 
 ## [Unreleased]
 
+### Fixed
+- **下载进度估算缺陷**：服务器不支持断点续传（返回 200 覆盖 `.part`）时，
+  此前实现把废弃 `.part` 大小计入总长，进度百分比会短暂超过 100%；
+  续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
+
 ### Added
+- **Permission 权限映射全量测试（+2）**：7 类权限 → 桥接方法组逐一钉住
+  （notification 复用 `ui` 组）、未知权限在 `FromStr` 与 JSON 反序列化
+  两个层面均被拒绝
+- **ARCHITECTURE.md 新增「3.1 后端事件一览」**：5 个后端事件的负载与
+  触发时机（含 `core://outdated`）
 - **插件 SDK 能力增强**：`onAny`（订阅全部宿主事件，日志/调试插件用）、
   `httpJson`（`httpRequest` 的 JSON 解析封装，非 2xx reject）；
   SDK 测试增至 10 项，PLUGIN_API 文档同步
