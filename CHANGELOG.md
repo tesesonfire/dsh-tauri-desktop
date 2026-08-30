@@ -7,6 +7,16 @@
 ## [Unreleased]
 
 ### Added
+- **pluginStore / profileStore 状态单测补齐（12 项）**：桥接注册的
+  pluginId 前缀语义、反注册清理 activeSidebarId、panel 去重、
+  档案删除时活动档案回落、后端错误透出
+- **market_service 仓库校验提取**：`normalize_repo` 纯函数
+  （owner/repo 归一化、`.git` 剥离、路径穿越/多级/空白拒绝）+ serde
+  可选字段缺省测试（3 项）
+- **WebDriver e2e 场景骨架**（`src-tauri/tests/webdriver_e2e.rs`）：
+  reqwest 直连 WebDriver 协议的最小客户端（会话/标题/元素定位，零新增
+  依赖），场景 1「应用启动 → 主窗口就绪」；默认跳过，`DSH_E2E=1` +
+  `DSH_E2E_APP` 按需启用，tests/e2e/README.md 更新运行说明
 - **插件 SDK 事件能力增强**：`once`（一次性订阅）、`off`（显式反订阅）、
   `waitForEvent(method, timeoutMs?)`（等待下一次事件，超时 reject）；
   新增 `plugins/sdk/test/bridge-client.test.ts` 覆盖调用往返、错误/超时、

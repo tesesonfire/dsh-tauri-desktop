@@ -183,6 +183,28 @@ fn collect_manifest_dirs(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
     }
 }
 
+/// 校验并归一化仓库标识（`owner/repo`）：去首尾斜杠与 `.git` 后缀，
+/// 拒绝路径穿越、多级路径、空白与空串。
+pub fn normalize_repo(repo: &str) -> AppResult<String> {
+    let cleaned = repo
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/')
+        .trim_end_matches(".git");
+    if cleaned.is_empty() {
+        return Err(AppError::InvalidInput("仓库标识不能为空".into()));
+    }
+    if cleaned.matches('/').count() != 1 {
+        return Err(AppError::InvalidInput(format!(
+            "仓库标识须为 owner/repo 形式: {cleaned}"
+        )));
+    }
+    if cleaned.contains("..") || cleaned.contains(char::is_whitespace) {
+        return Err(AppError::InvalidInput(format!("仓库标识非法: {cleaned}")));
+    }
+    Ok(cleaned.to_string())
+}
+
 /// 从 GitHub 仓库安装（或升级）插件：
 /// 下载默认分支 zipball → 解压 → 定位插件目录 → 校验 → 复制到 `~/.dsh/plugins/<id>`。
 pub async fn install_from_github(
@@ -190,10 +212,7 @@ pub async fn install_from_github(
     repo: &str,
     subpath: &str,
 ) -> AppResult<PluginInfo> {
-    let repo = repo.trim().trim_end_matches('/').trim_end_matches(".git");
-    if repo.matches('/').count() != 1 || repo.contains("..") {
-        return Err(AppError::InvalidInput(format!("仓库标识非法: {repo}")));
-    }
+    let repo = normalize_repo(repo)?;
     // api zipball 自动跟随默认分支（main/master 均可）
     let zip_url = format!("https://api.github.com/repos/{repo}/zipball");
     let tmp_dir = std::env::temp_dir().join(format!(
@@ -295,6 +314,37 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tempdir");
         std::fs::write(tmp.path().join("readme.md"), "x").expect("write");
         assert!(locate_manifest_dir(tmp.path(), "").is_err());
+    }
+
+    #[test]
+    fn normalize_repo_accepts_clean_forms() {
+        assert_eq!(normalize_repo("dsh-tauri-desk/dsh-tauri-plugins").expect("ok"), "dsh-tauri-desk/dsh-tauri-plugins");
+        assert_eq!(normalize_repo(" owner/repo/ ").expect("ok"), "owner/repo");
+        assert_eq!(normalize_repo("owner/repo.git").expect("ok"), "owner/repo");
+        assert!(normalize_repo("https://github.com/owner/repo").is_err(), "URL 形式应拒绝");
+    }
+
+    #[test]
+    fn normalize_repo_rejects_bad_forms() {
+        assert!(normalize_repo("").is_err(), "空串拒绝");
+        assert!(normalize_repo("owner").is_err(), "缺 owner/repo 拒绝");
+        assert!(normalize_repo("a/b/c").is_err(), "多级路径拒绝");
+        assert!(normalize_repo("a/../b").is_err(), "路径穿越拒绝");
+        assert!(normalize_repo("a b/c d").is_err(), "空白拒绝");
+        assert!(normalize_repo(".git").is_err(), "仅后缀拒绝");
+    }
+
+    #[test]
+    fn market_plugin_serde_defaults_missing_optional_fields() {
+        let raw = r#"{ "id": "dsh-tauri-x", "name": "X", "version": "1.0.0",
+            "description": "d", "repo": "a/b" }"#;
+        let plugin: MarketPlugin = serde_json::from_str(raw).expect("parse");
+        assert!(!plugin.official, "official 缺省为 false");
+        assert!(plugin.path.is_empty());
+        assert!(plugin.tags.is_empty());
+        let roundtrip: MarketPlugin =
+            serde_json::from_str(&serde_json::to_string(&plugin).expect("ser")).expect("deser");
+        assert_eq!(roundtrip.id, plugin.id);
     }
 
     #[test]

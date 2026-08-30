@@ -1,31 +1,38 @@
 # e2e 测试
 
-端到端测试基于 [tauri-driver](https://docs.rs/tauri-driver)（WebDriver 协议）：
+端到端测试基于 [tauri-driver](https://docs.rs/tauri-driver)（WebDriver 协议）。
+
+## 两条覆盖路径
+
+### 1. 服务层集成（默认随 `cargo test` 运行，无需 WebDriver）
+
+`src-tauri/tests/lifecycle.rs` 在临时 `DSH_HOME` 下走真实服务栈：
+
+- ✅ 场景 4（插件安装 → 禁用 → 启用 → KV 存储 → 卸载语义 + 非法 manifest 拒绝）
+- ✅ 场景 5（设置保存 → 重读持久化）
+
+### 2. WebDriver 场景（`src-tauri/tests/webdriver_e2e.rs`，按需启用）
+
+最小 WebDriver 客户端（reqwest 直连协议，零新增依赖）驱动 tauri-driver 运行真实窗口：
 
 ```bash
 cargo install tauri-driver --locked
 pnpm tauri build
-cargo test --test e2e   # 由 src-tauri/tests 驱动；本目录存放场景定义
+tauri-driver &                      # 默认监听 127.0.0.1:4444
+# Windows PowerShell 下启动应用二进制后执行：
+$env:DSH_E2E="1"; $env:DSH_E2E_APP="D:/.../src-tauri/target/release/dsh-tauri-desktop.exe"
+cargo test --test webdriver_e2e
 ```
 
-## 场景清单（按 Step 10 功能走查）
+环境变量：
 
-1. 应用启动 → 启动画面 → 主窗口显示
-2. dsh 服务启动 → 健康检查 → iframe 加载 Web UI
-3. dsh 停止/重启 → 状态徽章与日志面板联动
-4. 插件：安装 → 启用 → 禁用 → 卸载；侧边栏入口随 contributes 出现/消失
-5. 设置修改（主题/端口/白名单）→ 持久化 → 重启后保留
-6. 自更新：检查更新（无网络时优雅降级）
-7. CLI：注册 shim → 终端执行 `dsh --version`
+| 变量 | 作用 | 缺省 |
+|---|---|---|
+| `DSH_E2E` | `1` 时启用 WebDriver 场景，否则测试打印跳过说明 | 未设置（跳过） |
+| `DSH_E2E_APP` | 被测应用可执行文件路径 | – |
+| `DSH_E2E_WD_URL` | tauri-driver 地址 | `http://127.0.0.1:4444` |
 
-当前 0.1.0 版本以单元测试 + 手动走查为主，WebDriver 场景按上述清单分阶段补充
-（能力矩阵见 README「测试与质量」）。
+已实现：
 
-### 服务层集成覆盖进度
-
-部分场景的**业务逻辑**已由 Rust 集成测试先行覆盖（`src-tauri/tests/lifecycle.rs`，
-临时 `DSH_HOME` 下走真实服务栈，无需 WebDriver）：
-
-- ✅ 场景 4（插件安装 → 列表 → 禁用 → 启用 → KV 存储 → 卸载语义 + 非法 manifest 拒绝）
-- ✅ 场景 5（设置保存 → 重读持久化）
-- ⬜ 场景 1/2/3/6/7 需真实窗口与进程编排，仍按 WebDriver 路线推进
+- ✅ 场景 1（应用启动 → 主窗口标题可用 → React 根节点 `#root` 可定位）
+- ⬜ 场景 2/3/6/7 需要进程编排（dsh 启动/停止/自更新/CLI 终端验证），按清单分阶段补充
