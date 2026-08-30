@@ -197,6 +197,49 @@ mod tests {
     }
 
     #[test]
+    fn allowlist_expands_tilde_prefix() {
+        let home = dirs::home_dir().expect("home dir");
+        // 允许列表中的 `~` 展开为用户主目录
+        let list = vec!["~/.dsh".to_string()];
+        let inside = home.join(".dsh").join("plugins").join("x.json");
+        assert!(path_in_allowlist(&inside, &list), "~ 路径应匹配主目录下的目标");
+        let outside = home.join("Documents").join("secret.txt");
+        assert!(!path_in_allowlist(&outside, &list), "主目录外目标不匹配");
+    }
+
+    #[test]
+    fn allowlist_prefix_must_respect_component_boundaries() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let base = tmp.path().join("base2");
+        std::fs::create_dir_all(&base).expect("mkdir");
+        // "base-evil" 与 "base" 共享字符串前缀但不是同一目录，不得放行
+        let evil_sibling = tmp.path().join("base-evil");
+        std::fs::create_dir_all(&evil_sibling).expect("mkdir");
+        let list = vec![base.to_string_lossy().into_owned()];
+        assert!(!path_in_allowlist(&evil_sibling.join("f.txt"), &list));
+    }
+
+    #[test]
+    fn allowlist_unresolved_paths_fall_back_to_raw_prefix() {
+        // 目标与其父目录都不存在时按原样做字符串前缀匹配（写入前的预检语义）
+        let list = vec!["Z:/nonexistent-dsh-root".to_string()];
+        let target = PathBuf::from("Z:/nonexistent-dsh-root/a/b.txt");
+        assert!(path_in_allowlist(&target, &list));
+    }
+
+    #[test]
+    fn strip_win_prefix_removes_extended_prefix() {
+        assert_eq!(
+            strip_win_prefix(PathBuf::from(r"\\?\C:\Users\x")),
+            PathBuf::from(r"C:\Users\x")
+        );
+        assert_eq!(
+            strip_win_prefix(PathBuf::from("C:/plain/path")),
+            PathBuf::from("C:/plain/path")
+        );
+    }
+
+    #[test]
     fn sanitize_used_by_storage() {
         assert!(path::sanitize_name("com.a.b").is_ok());
         assert!(path::sanitize_name("../../etc").is_err());

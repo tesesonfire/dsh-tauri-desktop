@@ -7,6 +7,13 @@
 ## [Unreleased]
 
 ### Added
+- **PluginHost 组件测试（5 项）**：iframe 协议 URL 与沙箱/桥标记、
+  禁用态与后端错误详情、加载失败覆盖层重试、多实例桥标记唯一性
+- **市场页社区搜索测试（+2）**：GitHub 搜索结果渲染（star/仓库名）、
+  zipball 安装调用参数、无结果空态提示
+- **loader.rs 白名单路径边界测试（+4）**：`~` 前缀展开、组件边界
+  （`base` 与 `base-evil` 不混淆）、未解析路径的原样前缀匹配语义、
+  Windows `\\?\` 扩展前缀剥离
 - **OnboardingPage 向导流程测试（5 项）**：欢迎页环境徽章、推荐预设
   预选与切换、可选 CLI 注册按钮状态流转、完成步骤的档案创建/设置
   持久化/onDone 回调、汇总页文案
@@ -76,6 +83,8 @@
   按「服务未启动」渲染而非崩溃（MainPage 集成测试暴露）
 - pluginStore/profileStore 的 refresh 对空响应做归一化
   （`pluginList`/`profileList` 返回 undefined 时按空列表处理，不再崩溃）
+- **PluginHost 加载失败检测改为原生 error 监听**：React 合成 onError
+  对 iframe 在 jsdom/部分 WebView 中不触发，原生监听更可靠
 - TROUBLESHOOTING 新增插件市场类与 e2e/WebDriver 排错章节
 - 预设卡片按 `pluginId` 映射到真实插件（此前误用预设 id 匹配 manifest.id）
 - `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）

@@ -27,6 +27,16 @@ export function PluginHost(props: PluginHostProps): React.ReactElement {
     setLoadError(false);
   }, [src]);
 
+  // iframe 的 error 事件不冒泡且 React 合成系统对 iframe onError 不可靠
+  // （jsdom/部分 WebView 均不触发），这里直接挂原生监听
+  useEffect(() => {
+    const element = iframeRef.current;
+    if (element === null) return undefined;
+    const onError = (): void => setLoadError(true);
+    element.addEventListener("error", onError);
+    return () => element.removeEventListener("error", onError);
+  }, [src]);
+
   if (!plugin.enabled || plugin.error !== null) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
@@ -63,7 +73,6 @@ export function PluginHost(props: PluginHostProps): React.ReactElement {
         title={plugin.manifest.name}
         src={src}
         sandbox="allow-scripts allow-forms allow-popups"
-        onError={() => setLoadError(true)}
         className="h-full w-full border-0 bg-transparent"
       />
     </div>
