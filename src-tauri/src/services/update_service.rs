@@ -169,13 +169,6 @@ pub async fn check() -> AppResult<Option<UpdateInfo>> {
         }
     } else {
         // 回退：按平台关键字匹配资产名
-        let _arch_key = match platform_key() {
-            "windows-x86_64" => "windows-x64",
-            "darwin-aarch64" => "macos-aarch64",
-            "darwin-x86_64" => "macos-x64",
-            "linux-x86_64" => "linux-x64",
-            other => other,
-        };
         let download_url = body
             .get("assets")
             .and_then(serde_json::Value::as_array)
@@ -188,19 +181,10 @@ pub async fn check() -> AppResult<Option<UpdateInfo>> {
                         .to_lowercase();
                     let url =
                         asset.get("browser_download_url").and_then(|v| v.as_str());
-                    let platform_match = if cfg!(target_os = "windows") {
-                        name.contains("windows") || name.contains("setup.exe") || name.ends_with(".exe")
-                    } else if cfg!(target_os = "macos") {
-                        name.ends_with(".dmg")
-                    } else {
-                        name.contains("appimage") || name.ends_with(".deb")
-                    };
-                    let arch_match = if cfg!(target_arch = "aarch64") {
-                        name.contains("aarch64") || !name.contains("x64")
-                    } else {
-                        true
-                    };
-                    if url.is_some() && platform_match && arch_match && !name.contains("latest.json") {
+                    if url.is_some()
+                        && name != "latest.json"
+                        && asset_matches_platform(&name)
+                    {
                         url.map(str::to_string)
                     } else {
                         None
@@ -330,6 +314,24 @@ pub fn sha256_file(file: &std::path::Path) -> AppResult<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+/// 判断更新资产文件名是否匹配当前平台（纯函数，便于测试）。
+pub fn asset_matches_platform(name: &str) -> bool {
+    let name = name.to_lowercase();
+    let platform_match = if cfg!(target_os = "windows") {
+        name.contains("windows") || name.contains("setup.exe") || name.ends_with(".exe")
+    } else if cfg!(target_os = "macos") {
+        name.ends_with(".dmg")
+    } else {
+        name.contains("appimage") || name.ends_with(".deb")
+    };
+    let arch_match = if cfg!(target_arch = "aarch64") {
+        name.contains("aarch64") || !name.contains("x64")
+    } else {
+        true
+    };
+    platform_match && arch_match
+}
+
 fn emit(
     app: &tauri::AppHandle,
     stage: &str,
@@ -379,5 +381,27 @@ mod tests {
     fn platform_key_shape() {
         let key = platform_key();
         assert!(key.starts_with("windows") || key.starts_with("darwin") || key.starts_with("linux"));
+    }
+
+    #[test]
+    fn asset_matching_rejects_metadata_and_accepts_installer() {
+        // latest.json 元数据永远不作为更新包
+        assert!(!asset_matches_platform("latest.json"));
+        // 当前平台安装包匹配（跨平台断言用运行时 cfg 预期）
+        let candidate = if cfg!(target_os = "windows") {
+            "dsh-tauri-desktop_0.1.0_x64-setup.exe"
+        } else if cfg!(target_os = "macos") {
+            "dsh-tauri-desktop_0.1.0_aarch64.dmg"
+        } else {
+            "dsh-tauri-desktop_0.1.0_amd64.AppImage"
+        };
+        assert!(asset_matches_platform(candidate));
+        // 其他平台产物不匹配
+        let foreign = if cfg!(target_os = "windows") {
+            "dsh-tauri-desktop_0.1.0_amd64.AppImage"
+        } else {
+            "dsh-tauri-desktop_0.1.0_x64-setup.exe"
+        };
+        assert!(!asset_matches_platform(foreign));
     }
 }

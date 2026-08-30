@@ -107,6 +107,8 @@ sequenceDiagram
 | `update_check` | – | `UpdateInfo?` | – |
 | `update_download_and_apply` | – | `()` | `update://progress` |
 | `notify` | `{title,body}` | `()` | – |
+| `settings_get` / `settings_save` | `AppSettings` | – | – |
+| `presets_get` | – | `PresetsFile`（资源可远程替换） | – |
 | `window_*` (minimize/maximize/close/isMaximized) | – | – | – |
 
 ## 4. 数据模型（核心结构）

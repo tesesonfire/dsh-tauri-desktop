@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### Added
+- 主界面 ActivityBar 直达插件市场 / 档案管理 / 设置页（同布局内切换）
+- 「dsh 核心版本」管理面板：远端版本安装（GitHub Releases）、本地多版本切换/删除
+- dsh WebUI 未启动面板显示环境自检徽章（Node / dsh 安装状态）
+- RTL 组件测试 14 项（ui 基元、Markdown 消毒、ActivityBar、DshFrame 状态机、TitleBar）
+- `asset_matches_platform` 纯函数与 `tauri.invoke` 白名单单元测试
+
+### Changed
+- `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）
+- 预设插件安装接线：对应内置插件直接启用；无下载源时进入待安装列表
+- DshFrame 断连态显示错误覆盖层（此前误渲染 iframe）
+
 ## [0.1.0] - 2026-08-31
 
 首个可用版本。

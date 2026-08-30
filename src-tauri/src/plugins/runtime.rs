@@ -54,7 +54,10 @@ pub async fn execute(
 }
 
 /// tauri.invoke 白名单：插件只能调用极少数无副作用/信息类命令。
-fn tauri_invoke_allowlist(manifest: &crate::models::plugin::Manifest, params: &Value) -> AppResult<Value> {
+fn tauri_invoke_allowlist(
+    manifest: &crate::models::plugin::Manifest,
+    params: &Value,
+) -> AppResult<Value> {
     const ALLOWED: &[&str] = &["app_version", "dsh_status", "profile_list"];
     let command = params
         .get("command")
@@ -67,4 +70,45 @@ fn tauri_invoke_allowlist(manifest: &crate::models::plugin::Manifest, params: &V
         )));
     }
     Ok(json!({ "ok": true, "delegated": "frontend" }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::plugin::Manifest;
+
+    fn test_manifest() -> Manifest {
+        Manifest {
+            id: "com.test.plugin".into(),
+            name: "Test".into(),
+            version: "0.1.0".into(),
+            description: String::new(),
+            author: String::new(),
+            entry: "index.html".into(),
+            permissions: vec![],
+            contributes: Default::default(),
+        }
+    }
+
+    #[test]
+    fn tauri_invoke_requires_command_param() {
+        let err = tauri_invoke_allowlist(&test_manifest(), &Value::Null).expect_err("denied");
+        assert!(err.to_string().contains("需要 command 参数"));
+    }
+
+    #[test]
+    fn tauri_invoke_blocks_unknown_command() {
+        let err = tauri_invoke_allowlist(&test_manifest(), &json!({ "command": "fs_read" }))
+            .expect_err("denied");
+        assert!(err.to_string().contains("不允许调用命令 fs_read"));
+    }
+
+    #[test]
+    fn tauri_invoke_accepts_whitelisted() {
+        let result =
+            tauri_invoke_allowlist(&test_manifest(), &json!({ "command": "dsh_status" }))
+                .expect("allowed");
+        assert_eq!(result["delegated"], "frontend");
+        assert_eq!(result["ok"], true);
+    }
 }
