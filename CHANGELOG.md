@@ -14,6 +14,12 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
+- **自定义协议 URI 解析提取为纯函数**：`parse_plugin_uri`（Windows 的
+  `http://dshplugin.localhost/` 形态与 macOS/Linux 的 `dshplugin://` 形态
+  归一化、缺省 `index.html`、无关 URI 返回空 id）+ `mime_type` 静态资源
+  映射测试（+5，插件资源服务的安全解析路径首次有直接覆盖）
+- **detectPlatform 平台分支测试（+3）**：macos/windows/linux UA 识别、
+  未知平台回退、windowStore 平台记录
 - **UpdatePanel 失败降级与重启就绪测试（+2）**：检查更新网络失败时错误
   Toast 且面板可重试、下载应用后进入「立即重启」状态
 - **workflow_service 环境检查文案提取**：`env_message(node_ok, dsh_installed)`

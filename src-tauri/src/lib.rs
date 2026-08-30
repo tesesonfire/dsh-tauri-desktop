@@ -106,6 +106,23 @@ pub fn run() {
     }
 }
 
+/// 解析 `dshplugin://` 协议请求 URI 为 (插件 id, 相对路径)。
+///
+/// Windows 实际形态是 `http://dshplugin.localhost/<id>/<path>`，
+/// macOS/Linux 为 `dshplugin://<id>/<path>`，两种形态都归一化处理；
+/// 缺省路径为 `index.html`。
+pub(crate) fn parse_plugin_uri(uri: &str) -> (String, String) {
+    let path_part = uri
+        .split("dshplugin.localhost/")
+        .nth(1)
+        .or_else(|| uri.split("dshplugin://").nth(1))
+        .unwrap_or("");
+    let mut parts = path_part.splitn(2, '/');
+    let plugin_id = parts.next().unwrap_or("").to_string();
+    let file_path = parts.next().unwrap_or("index.html").to_string();
+    (plugin_id, file_path)
+}
+
 /// `dshplugin://<id>/<path>` 自定义协议：从插件目录安全地提供静态资源。
 ///
 /// Windows 上实际 URL 形如 `http://dshplugin.localhost/<id>/<path>`；
@@ -115,14 +132,7 @@ fn serve_plugin_asset(
     request: tauri::http::Request<Vec<u8>>,
 ) -> tauri::http::Response<Vec<u8>> {
     let uri = request.uri().to_string();
-    let path_part = uri
-        .split("dshplugin.localhost/")
-        .nth(1)
-        .or_else(|| uri.split("dshplugin://").nth(1))
-        .unwrap_or("");
-    let mut parts = path_part.splitn(2, '/');
-    let plugin_id = parts.next().unwrap_or("").to_string();
-    let file_path = parts.next().unwrap_or("index.html").to_string();
+    let (plugin_id, file_path) = parse_plugin_uri(&uri);
 
     let not_found = || {
         tauri::http::Response::builder()
@@ -236,5 +246,57 @@ pub fn show_main_window(app: &tauri::AppHandle) {
         let _ = win.set_focus();
     } else {
         tracing::warn!("主窗口不存在，无法显示");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_plugin_uri_handles_windows_http_form() {
+        let (id, path) =
+            parse_plugin_uri("http://dshplugin.localhost/com.a.b/dist/index.js?x=1");
+        assert_eq!(id, "com.a.b");
+        assert_eq!(path, "dist/index.js?x=1");
+    }
+
+    #[test]
+    fn parse_plugin_uri_handles_scheme_form() {
+        let (id, path) = parse_plugin_uri("dshplugin://com.a.b/assets/logo.svg");
+        assert_eq!(id, "com.a.b");
+        assert_eq!(path, "assets/logo.svg");
+    }
+
+    #[test]
+    fn parse_plugin_uri_defaults_to_index_html() {
+        let (id, path) = parse_plugin_uri("http://dshplugin.localhost/com.a.b");
+        assert_eq!(id, "com.a.b");
+        assert_eq!(path, "index.html");
+        let (id2, path2) = parse_plugin_uri("dshplugin://com.a.b");
+        assert_eq!(id2, "com.a.b");
+        assert_eq!(path2, "index.html");
+    }
+
+    #[test]
+    fn parse_plugin_uri_rejects_unrelated_uris() {
+        // 与插件协议无关的 URI 不应解析出任何内容（serve 端按空 id 返回 404）
+        let (id, _) = parse_plugin_uri("http://tauri.localhost/index.html");
+        assert_eq!(id, "");
+    }
+
+    #[test]
+    fn mime_type_covers_static_asset_kinds() {
+        assert_eq!(mime_type("index.html"), "text/html; charset=utf-8");
+        assert_eq!(mime_type("app.mjs"), "text/javascript; charset=utf-8");
+        assert_eq!(mime_type("style.css"), "text/css; charset=utf-8");
+        assert_eq!(mime_type("data.json"), "application/json; charset=utf-8");
+        assert_eq!(mime_type("logo.svg"), "image/svg+xml");
+        assert_eq!(mime_type("README.md"), "text/markdown; charset=utf-8");
+        assert_eq!(mime_type("font.woff2"), "font/woff2");
+        // 大小写不敏感
+        assert_eq!(mime_type("A.HTML"), "text/html; charset=utf-8");
+        // 未知扩展名回退二进制流
+        assert_eq!(mime_type("blob.bin"), "application/octet-stream");
     }
 }
