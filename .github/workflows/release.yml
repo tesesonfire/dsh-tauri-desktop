@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: "--target x86_64-pc-windows-msvc"
+          - os: macos-latest
+            # Universal Binary：Intel + Apple Silicon
+            args: "--target universal-apple-darwin"
+          - os: ubuntu-latest
+            args: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: 安装 Linux 系统依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev
+      - name: 安装前端依赖
+        run: pnpm install --frozen-lockfile
+      - name: 构建内置插件
+        run: pnpm plugins:build
+      - name: Tauri 构建（三平台安装包）
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "dsh-tauri-desktop ${{ github.ref_name }}"
+          releaseBody: "三平台安装包：Windows (NSIS) / macOS (DMG, Universal) / Linux (AppImage + deb)。更新元数据见 latest.json。"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

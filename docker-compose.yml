@@ -1,0 +1,27 @@
+# 集成测试环境：启动一次完整的前端 + Rust 测试流水线
+services:
+  tests:
+    build:
+      context: .
+      target: test
+    container_name: dsh-tauri-tests
+    environment:
+      CARGO_TERM_COLOR: always
+      RUST_LOG: info
+
+  # 开发容器：挂载源码，进入后可 pnpm tauri dev（需 X11/Wayland 转发才能显示窗口）
+  dev:
+    build:
+      context: .
+      target: base
+    container_name: dsh-tauri-dev
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+    working_dir: /workspace
+    environment:
+      DISPLAY: ${DISPLAY:-}
+    command: sleep infinity
+
+volumes:
+  cargo-cache:

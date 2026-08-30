@@ -1,0 +1,51 @@
+name: Update Metadata
+
+# 发布后重新生成 latest.json（自更新元数据：各平台下载地址 + SHA256），
+# 附加到最新 Release，供 update_service 校验与应用。
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  metadata:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取版本号
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: 生成 latest.json
+        id: meta
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          REPO="${GITHUB_REPOSITORY}"
+          BASE="https://github.com/${REPO}/releases/download/v${VERSION}"
+          FILE="dsh-tauri-desktop_${VERSION}_x64-setup.exe"
+          hashes() { sha256sum "$1" | cut -d' ' -f1; }
+          cat > latest.json <<JSON
+          {
+            "version": "${VERSION}",
+            "notes": "dsh-tauri-desktop v${VERSION} 发布",
+            "platforms": {
+              "windows-x86_64": { "url": "${BASE}/${FILE}" },
+              "darwin-aarch64": { "url": "${BASE}/dsh-tauri-desktop_${VERSION}_aarch64.dmg" },
+              "darwin-x86_64": { "url": "${BASE}/dsh-tauri-desktop_${VERSION}_x64.dmg" },
+              "linux-x86_64": { "url": "${BASE}/dsh-tauri-desktop_${VERSION}_amd64.AppImage" }
+            }
+          }
+          JSON
+          echo "file=latest.json" >> "$GITHUB_OUTPUT"
+      - name: 上传 latest.json 到 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: latest.json
+          overwrite_files: true
