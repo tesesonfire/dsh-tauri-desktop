@@ -14,6 +14,8 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
+- **UpdatePanel 失败降级与重启就绪测试（+2）**：检查更新网络失败时错误
+  Toast 且面板可重试、下载应用后进入「立即重启」状态
 - **workflow_service 环境检查文案提取**：`env_message(node_ok, dsh_installed)`
   纯函数（Node 缺失优先于 dsh 缺失提示）+ 测试
 - **Toaster 全局渲染器测试（3 项）**：四类 Toast 的样式分支、点击关闭

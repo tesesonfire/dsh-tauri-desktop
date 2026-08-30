@@ -163,4 +163,36 @@ describe("UpdatePanel", () => {
     await waitFor(() => expect(screen.getByText(/修复若干问题/)).toBeTruthy());
     expect(screen.getAllByText(/0\.2\.0/).length).toBeGreaterThan(0);
   });
+
+  it("check failure degrades to an error toast without crashing", async () => {
+    serviceMock("updateCheck").mockRejectedValue(new Error("[update_check] 网络不可达"));
+    render(<UpdatePanel />);
+    fireEvent.click(screen.getByRole("button", { name: /检查更新/ }));
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some((t) => t.message.includes("update_check"))).toBe(true),
+    );
+    // 面板仍在，可再次点击检查
+    expect(screen.getByRole("button", { name: /检查更新/ })).toBeTruthy();
+    expect(screen.queryByText(/修复若干问题/)).toBeNull();
+  });
+
+  it("download-apply marks restart readiness via toast", async () => {
+    serviceMock("updateCurrentVersion").mockResolvedValue("0.1.0");
+    serviceMock("updateCheck").mockResolvedValue({
+      version: "0.2.0",
+      notes: null,
+      downloadUrl: "https://example.com/app.exe",
+      sha256: "abc",
+      currentVersion: "0.1.0",
+    });
+    render(<UpdatePanel />);
+    fireEvent.click(screen.getByRole("button", { name: /检查更新/ }));
+    // 找到「下载并应用」按钮（下载完成后才出现的重启提示由 apply 后置位）
+    const applyButton = await screen.findByRole("button", { name: /更新到 v0.2.0/ });
+    fireEvent.click(applyButton);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "立即重启" })).toBeTruthy(),
+    );
+    expect(serviceMock("updateDownloadAndApply")).toHaveBeenCalledTimes(1);
+  });
 });
