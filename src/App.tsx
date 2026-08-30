@@ -36,15 +36,17 @@ export default function App(): React.ReactElement {
         .catch(() => setOnboarded(true));
       // 前端就绪：关闭闪屏、显示主窗口
       void appReady().catch((err: unknown) => console.error("app_ready failed:", err));
-      // 窗口行为：启动时最大化/最小化
-      void settingsGet().then((settings: AppSettings) => {
-        const win = getCurrentWindow();
-        if (settings.general.launchBehavior === "maximized") {
-          void win.maximize().catch(() => undefined);
-        } else if (settings.general.launchBehavior === "minimized") {
-          void win.minimize().catch(() => undefined);
-        }
-      });
+      // 窗口行为：启动时最大化/最小化（失败静默 —— 首个 settingsGet 已兜底路由）
+      void settingsGet()
+        .then((settings: AppSettings) => {
+          const win = getCurrentWindow();
+          if (settings.general.launchBehavior === "maximized") {
+            void win.maximize().catch(() => undefined);
+          } else if (settings.general.launchBehavior === "minimized") {
+            void win.minimize().catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
     } else {
       setOnboarded(true); // 纯浏览器 dev 环境跳过
     }

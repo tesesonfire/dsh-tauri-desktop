@@ -7,6 +7,8 @@
 ## [Unreleased]
 
 ### Fixed
+- **App 根组件的第二次 `settingsGet`（启动窗口行为）缺少 catch**，
+  `settings_get` 失败时产生未处理 rejection；现与路由判定一致静默降级
 - **下载进度估算缺陷**：服务器不支持断点续传（返回 200 覆盖 `.part`）时，
   此前实现把废弃 `.part` 大小计入总长，进度百分比会短暂超过 100%；
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
