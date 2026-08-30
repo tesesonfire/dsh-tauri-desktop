@@ -14,6 +14,10 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
+- **workflow_service 环境检查文案提取**：`env_message(node_ok, dsh_installed)`
+  纯函数（Node 缺失优先于 dsh 缺失提示）+ 测试
+- **Toaster 全局渲染器测试（3 项）**：四类 Toast 的样式分支、点击关闭
+  与 store 同步、空态渲染
 - **lifecycle 集成测试再扩展 dsh 核心多版本管理**：CURRENT 指针切换
   （容忍 v 前缀）、未安装版本拒绝、`installed_versions` 的 is_current
   与 entry 解析、当前版本删除拒绝、非当前版本删除目录清理、重复删除

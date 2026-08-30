@@ -689,6 +689,17 @@ pub fn parse_node_major_version(version_output: &str) -> Option<u32> {
         .and_then(|major| major.parse::<u32>().ok())
 }
 
+/// 环境检查结果文案（纯逻辑：Node 缺失优先于 dsh 缺失提示）。
+pub fn env_message(node_ok: bool, dsh_installed: bool) -> String {
+    if !node_ok {
+        "未检测到 Node.js (>=18)。首次使用请在引导页安装运行时。".to_string()
+    } else if !dsh_installed {
+        "Node 运行时可用，但 dsh 核心未安装。请在引导页或设置中安装。".to_string()
+    } else {
+        "环境就绪".to_string()
+    }
+}
+
 /// 环境检查：Node 运行时 + dsh 安装情况。
 pub async fn env_check() -> EnvCheckResult {
     let node_path = which_node();
@@ -712,13 +723,7 @@ pub async fn env_check() -> EnvCheckResult {
 
     let dsh_entry = core_service::resolve_active_entry().ok();
     let dsh_version = core_service::current_version();
-    let message = if !node_ok {
-        "未检测到 Node.js (>=18)。首次使用请在引导页安装运行时。".to_string()
-    } else if dsh_entry.is_none() {
-        "Node 运行时可用，但 dsh 核心未安装。请在引导页或设置中安装。".to_string()
-    } else {
-        "环境就绪".to_string()
-    };
+    let message = env_message(node_ok, dsh_entry.is_some());
 
     EnvCheckResult {
         node_ok,
@@ -751,6 +756,14 @@ mod tests {
         assert_eq!(classify_line("Server listening on 3080", "info"), "success");
         assert_eq!(classify_line("hello", "info"), "info");
         assert_eq!(classify_line("hello", "error"), "error");
+    }
+
+    #[test]
+    fn env_message_prioritizes_missing_node_over_missing_core() {
+        assert!(env_message(false, false).contains("Node.js"));
+        assert!(env_message(false, true).contains("Node.js"));
+        assert!(env_message(true, false).contains("dsh 核心未安装"));
+        assert_eq!(env_message(true, true), "环境就绪");
     }
 
     #[test]
