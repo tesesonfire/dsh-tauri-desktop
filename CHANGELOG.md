@@ -7,6 +7,12 @@
 ## [Unreleased]
 
 ### Added
+- **插件 SDK 能力增强**：`onAny`（订阅全部宿主事件，日志/调试插件用）、
+  `httpJson`（`httpRequest` 的 JSON 解析封装，非 2xx reject）；
+  SDK 测试增至 10 项，PLUGIN_API 文档同步
+- **tauriService 错误包装测试（4 项）**：字符串/对象 rejection 统一包装为
+  `[command] message` 上下文 Error（cause 保留）、参数透传与 null 可选
+  参数归一化
 - **PluginBridge（宿主半边）测试（8 项，此前覆盖率 0%）**：ping 应答、
   sidebar/panel 注册的 pluginId 前缀语义、未知方法转发后端、后端拒绝时
   ok:false 错误回传、非桥接消息过滤、事件广播与主题事件重播

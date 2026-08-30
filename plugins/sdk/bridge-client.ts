@@ -78,6 +78,7 @@ export class BridgeClient {
     { resolve: (value: unknown) => void; reject: (reason: Error) => void }
   >();
   private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
+  private readonly anyHandlers = new Set<(method: string, payload: unknown) => void>();
   private listening = false;
   private listener?: (event: MessageEvent) => void;
 
@@ -105,6 +106,9 @@ export class BridgeClient {
         const handlers = this.eventHandlers.get(data.method);
         if (handlers !== undefined) {
           for (const handler of handlers) handler(data.payload);
+        }
+        for (const anyHandler of this.anyHandlers) {
+          anyHandler(data.method, data.payload);
         }
       }
     };
@@ -187,6 +191,24 @@ export class BridgeClient {
         reject(new Error(`waitForEvent timeout: ${method}`));
       }, timeoutMs ?? 30000);
     });
+  }
+
+  /** 订阅全部宿主事件（日志插件、调试面板用）；返回取消函数。 */
+  onAny(handler: (method: string, payload: unknown) => void): () => void {
+    this.anyHandlers.add(handler);
+    return () => this.anyHandlers.delete(handler);
+  }
+
+  /** httpRequest 的 JSON 便捷封装：status 2xx 时解析 body，否则 reject。 */
+  async httpJson<T = unknown>(
+    url: string,
+    init?: { method?: string; headers?: Record<string, string>; body?: unknown },
+  ): Promise<T> {
+    const response = await this.httpRequest(url, init);
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`http request failed: ${response.status}`);
+    }
+    return JSON.parse(response.body) as T;
   }
 
   /* ---------- 便捷 API ---------- */

@@ -119,4 +119,44 @@ describe("BridgeClient", () => {
     expect(handler).toHaveBeenCalled();
     client.stopListen();
   });
+
+  it("onAny receives every event with its method name and can unsubscribe", () => {
+    const client = new BridgeClient({ pluginId: "com.test.p", target: window });
+    client.listen();
+    const handler = vi.fn();
+    const cancel = client.onAny(handler);
+    emit({ id: "evt:9", pluginId: "com.test.p", type: "evt", method: "theme.changed", payload: "dark" });
+    emit({ id: "evt:10", pluginId: "com.test.p", type: "evt", method: "dsh.state", payload: "running" });
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenNthCalledWith(1, "theme.changed", "dark");
+    expect(handler).toHaveBeenNthCalledWith(2, "dsh.state", "running");
+    cancel();
+    emit({ id: "evt:11", pluginId: "com.test.p", type: "evt", method: "dsh.state", payload: "late" });
+    expect(handler).toHaveBeenCalledTimes(2);
+    client.stopListen();
+  });
+
+  it("httpJson parses the body on 2xx and rejects on error status", async () => {
+    const seen: unknown[] = [];
+    vi.spyOn(window, "postMessage").mockImplementation((msg) => seen.push(msg));
+    const client = new BridgeClient({ pluginId: "com.test.p", target: window, timeoutMs: 2000 });
+    client.listen();
+
+    // 第一个请求返回 200 + JSON body
+    const okPromise = client.httpJson<{ name: string }>("https://api.example.com/data");
+    await vi.waitFor(() => expect(seen.length).toBe(1));
+    const okRequest = seen[0] as { id: string };
+    respond(okRequest.id, true, { status: 200, body: '{"name":"dsh"}' });
+    await expect(okPromise).resolves.toEqual({ name: "dsh" });
+
+    // 第二个请求返回 500 → reject
+    const failPromise = client.httpJson("https://api.example.com/bad");
+    await vi.waitFor(() => expect(seen.length).toBe(2));
+    const failRequest = seen[1] as { id: string };
+    respond(failRequest.id, true, { status: 500, body: "oops" });
+    await expect(failPromise).rejects.toThrow("http request failed: 500");
+
+    client.stopListen();
+    vi.restoreAllMocks();
+  });
 });

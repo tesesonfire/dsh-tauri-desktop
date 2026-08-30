@@ -125,6 +125,8 @@ client.on("dsh.state", (status) => { ... });
 client.once("dsh.state", handler);                // 一次性订阅（触发后自动移除）
 client.off("theme.changed", handler);             // 显式反订阅
 const next = await client.waitForEvent("dsh.state", 5000); // 等待下一次事件，超时 reject
+client.onAny((method, payload) => { ... });  // 订阅全部事件（日志/调试）
+const data = await client.httpJson("https://api.x.com/y"); // httpRequest 的 JSON 解析封装
 ```
 
 各方法返回值错误时 Promise reject（`error` 字符串包装为 Error）。
