@@ -85,6 +85,32 @@ plugins/                内置插件（每项含 manifest.json/src/test/dist/REA
   加断点；Rust 端 `runtime::execute` 有 debug 日志（`RUST_LOG=dsh_tauri_desktop=debug`）。
 - **只调试前端**：`pnpm dev` 后浏览器访问 http://localhost:1420（invoke 调用会失败，属预期）。
 
+## 测试编写约定
+
+前端测试位于 `tests/unit/`，统一使用共享 mock 工厂
+`tests/helpers/mockTauriService.ts`：
+
+```ts
+vi.mock("@/services/tauriService", async () => {
+  const { buildTauriServiceMockModule } = await import("../helpers/mockTauriService");
+  return buildTauriServiceMockModule();
+});
+
+// 按需覆盖某个导出的行为
+serviceMock("dshStatus").mockResolvedValue({ ... });
+```
+
+约定要点：
+
+- 工厂必须显式列出 tauriService 全部导出名（vitest mocker 的要求）；
+  新增 IPC 命令后同步更新 `TAURI_SERVICE_EXPORTS`。
+- 事件订阅类导出（`onDshLog` 等）默认 resolve no-op 取消函数。
+- 页面/组件在挂载即调用的命令（`pluginList`、`profileList` 等）在用例
+  `beforeEach` 中给出合法返回值，否则组件会拿到 `undefined`。
+- Rust 侧测试分两层：`#[cfg(test)]` 单元测试 + `src-tauri/tests/lifecycle.rs`
+  服务层集成（临时 `DSH_HOME`，断言收敛在单个 `#[test]` 内避免环境变量竞争）；
+  WebDriver e2e 在 `src-tauri/tests/webdriver_e2e.rs`，用 `DSH_E2E=1` 门控。
+
 ## 数据目录
 
 运行时数据都在 `~/.dsh/`（可用环境变量 `DSH_HOME` 重定向）：

@@ -7,6 +7,12 @@
 ## [Unreleased]
 
 ### Added
+- **PluginBridge（宿主半边）测试（8 项，此前覆盖率 0%）**：ping 应答、
+  sidebar/panel 注册的 pluginId 前缀语义、未知方法转发后端、后端拒绝时
+  ok:false 错误回传、非桥接消息过滤、事件广播与主题事件重播
+- **dshStore 动作与 dshService 纯函数测试（6 项）**：start/stop/restart
+  状态机与错误透出、subscribeEvents 的 dsh.state → connect 迁移、
+  指数退避序列、WebUI 地址构建、Tauri 环境探测
 - **CoreManagerPanel / PluginList / UpdatePanel 测试（8 项）**：已装/远端
   版本展示与切换/删除/安装调用、插件列表启用开关与卸载、更新检查
   「已最新」Toast 与更新日志渲染（经 toastStore 断言）
@@ -90,6 +96,8 @@
 - `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
 - README 功能清单与测试分层说明同步（8 个内置插件、市场、面板坞、
   过期提醒、三层测试覆盖）
+- DEVELOPMENT.md 新增「测试编写约定」：共享 mock 工厂用法、新增 IPC
+  命令的同步要求、Rust 两层测试与环境变量竞争规避
 - DshFrame 状态空值防御：`dsh_status` 返回 undefined（契约漂移/异常）时
   按「服务未启动」渲染而非崩溃（MainPage 集成测试暴露）
 - pluginStore/profileStore 的 refresh 对空响应做归一化
