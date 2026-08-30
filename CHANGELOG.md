@@ -7,6 +7,14 @@
 ## [Unreleased]
 
 ### Added
+- **OnboardingPage 向导流程测试（5 项）**：欢迎页环境徽章、推荐预设
+  预选与切换、可选 CLI 注册按钮状态流转、完成步骤的档案创建/设置
+  持久化/onDone 回调、汇总页文案
+- **测试基建**：`tests/helpers/mockTauriService.ts` 共享 mock 工厂
+  （显式导出列表 + 事件订阅 no-op 取消函数 + 后端契约空值兜底），
+  mainPage/settingsPage/panels 三个测试文件重构复用
+- **compare_versions 边界加固与测试**：容忍首尾空白与 v 前缀；
+  用测试钉住已知局限（仅比较前 3 段、prerelease 截断判等）
 - **SettingsPage 测试（4 项）**：加载态/版本号渲染、通用页主题切换保存、
   dsh 配置页端口修改持久化、高级页白名单内容展示
 - **profile_service 纯逻辑提取**：`ensure_not_duplicate`（id/name 双重

@@ -4,21 +4,18 @@ import { CliPanel } from "@/components/CliPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { useDshStore } from "@/stores/dshStore";
 import { useProfileStore } from "@/stores/profileStore";
+import {
+  serviceMock,
+} from "../helpers/mockTauriService";
 import type { ActivityItem } from "@/components/ActivityBar";
 import type { DshStatus, Profile } from "@/types/dsh";
 
-/** CliPanel 与 Sidebar 组件测试（tauriService 整模块 mock）。 */
+/** CliPanel 与 Sidebar 组件测试（共享 tauriService mock 工厂）。 */
 
-const mocks = vi.hoisted(() => ({
-  cliStatus: vi.fn(),
-  cliInstallShim: vi.fn(),
-  dshStart: vi.fn(),
-  dshStop: vi.fn(),
-  dshRestart: vi.fn(),
-  profileSwitch: vi.fn(),
-}));
-
-vi.mock("@/services/tauriService", () => mocks);
+vi.mock("@/services/tauriService", async () => {
+  const { buildTauriServiceMockModule } = await import("../helpers/mockTauriService");
+  return buildTauriServiceMockModule();
+});
 
 const RUNNING_STATUS: DshStatus = {
   state: "running",
@@ -37,7 +34,7 @@ describe("CliPanel", () => {
   });
 
   it("shows registered state and shim path from backend", async () => {
-    mocks.cliStatus.mockResolvedValue({ installed: true, shimPath: "C:\\bin\\dsh.cmd" });
+    serviceMock("cliStatus").mockResolvedValue({ installed: true, shimPath: "C:\\bin\\dsh.cmd" });
     render(<CliPanel />);
     await waitFor(() => expect(screen.getByText("已注册")).toBeTruthy());
     expect(screen.getByText(/dsh\.cmd/)).toBeTruthy();
@@ -45,8 +42,8 @@ describe("CliPanel", () => {
   });
 
   it("shows unregistered state then updates after install", async () => {
-    mocks.cliStatus.mockResolvedValue({ installed: false, shimPath: null });
-    mocks.cliInstallShim.mockResolvedValue({
+    serviceMock("cliStatus").mockResolvedValue({ installed: false, shimPath: null });
+    serviceMock("cliInstallShim").mockResolvedValue({
       installed: true,
       shimPath: "C:\\bin\\dsh.cmd",
       message: "注册成功",
@@ -55,7 +52,7 @@ describe("CliPanel", () => {
     await waitFor(() => expect(screen.getByText("未注册")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "注册 dsh 命令" }));
     await waitFor(() => expect(screen.getByText("已注册")).toBeTruthy());
-    expect(mocks.cliInstallShim).toHaveBeenCalledTimes(1);
+    expect(serviceMock("cliInstallShim")).toHaveBeenCalledTimes(1);
   });
 });
 

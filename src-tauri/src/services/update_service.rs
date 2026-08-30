@@ -78,7 +78,8 @@ struct PlatformEntry {
 /// 比较两个 semver 字符串（a > b -> Greater）。
 pub fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
     fn parse(v: &str) -> Vec<u64> {
-        v.trim_start_matches('v')
+        v.trim()
+            .trim_start_matches('v')
             .split(['.', '-'])
             .map_while(|part| part.parse::<u64>().ok())
             .collect()
@@ -363,6 +364,24 @@ mod tests {
         assert_eq!(compare_versions("0.1.0", "0.2.0"), Ordering::Less);
         assert_eq!(compare_versions("1.0.0", "1.0.0"), Ordering::Equal);
         assert_eq!(compare_versions("1.10.0", "1.9.0"), Ordering::Greater);
+    }
+
+    #[test]
+    fn semver_compare_boundaries() {
+        use std::cmp::Ordering;
+        // 缺失分量按 0 补齐
+        assert_eq!(compare_versions("1.0", "1.0.0"), Ordering::Equal);
+        assert_eq!(compare_versions("2", "1.9.9"), Ordering::Greater);
+        // v 前缀与首尾空白均被容忍（发行 tag 有时带空格）
+        assert_eq!(compare_versions(" v1.2.3 ", "1.2.3"), Ordering::Equal);
+        // 非 u64 段截断解析："1.0.x" 与 "1.0" 等价
+        assert_eq!(compare_versions("1.0.x", "1.0"), Ordering::Equal);
+        // 完全非数字视为 0.0.0
+        assert_eq!(compare_versions("abc", "0.0.1"), Ordering::Less);
+        // 已知局限（用测试钉住）：仅比较前 3 段，prerelease 标签（-beta.N）
+        // 解析在 '-' 处截断，与正式版判等 —— 对更新检查足够（tag 均为 3 段 semver）
+        assert_eq!(compare_versions("1.0.0.1", "1.0.0"), Ordering::Equal);
+        assert_eq!(compare_versions("1.0.0-beta.1", "1.0.0"), Ordering::Equal);
     }
 
     #[test]

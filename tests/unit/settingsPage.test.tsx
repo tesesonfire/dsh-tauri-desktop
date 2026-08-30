@@ -1,42 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "@/pages/SettingsPage";
+import {
+  serviceMock,
+} from "../helpers/mockTauriService";
 import type { AppSettings } from "@/types/tauri";
 
-/** SettingsPage 测试：四标签页切换 + 保存链路（tauriService 显式导出 mock）。 */
+/** SettingsPage 测试：四标签页切换 + 保存链路（共享 tauriService mock 工厂）。 */
 
-const mocks = vi.hoisted(() => {
-  const registry = new Map<string, ReturnType<typeof vi.fn>>();
-  const get = (name: string): ReturnType<typeof vi.fn> => {
-    let fn = registry.get(name);
-    if (fn === undefined) {
-      fn = vi.fn(() => Promise.resolve(undefined));
-      registry.set(name, fn);
-    }
-    return fn;
-  };
-  return { get };
-});
-
-vi.mock("@/services/tauriService", () => {
-  const moduleObject: Record<string, unknown> = {};
-  for (const name of [
-    "appReady", "appVersion", "quitApp", "openSecondaryWindow", "presetsGet",
-    "dshStart", "dshStop", "dshRestart", "dshStatus", "dshEnvCheck",
-    "coreListVersions", "coreInstalled", "coreCurrent", "coreInstall", "coreUse",
-    "coreRemove", "profileList", "profileActive", "profileCreate", "profileDelete",
-    "profileSwitch", "profileExport", "profileImport", "pluginList", "pluginInstall",
-    "pluginUninstall", "pluginSetEnabled", "pluginSetConfig", "pluginGetConfig",
-    "pluginReadme", "pluginManifest", "pluginStorageGet", "pluginStorageSet",
-    "pluginStorageDelete", "pluginBridgeCall", "marketOfficial", "marketSearch",
-    "marketInstall", "marketUpgrades", "downloadFile", "downloadCancel",
-    "cliInstallShim", "cliStatus", "updateCheck", "updateDownloadAndApply",
-    "updateCurrentVersion", "updateRelaunch", "notify", "settingsGet", "settingsSave",
-    "onDshLog", "onDshState", "onDownloadProgress", "onUpdateProgress", "onCoreOutdated",
-  ]) {
-    moduleObject[name] = mocks.get(name);
-  }
-  return moduleObject;
+vi.mock("@/services/tauriService", async () => {
+  const { buildTauriServiceMockModule } = await import("../helpers/mockTauriService");
+  return buildTauriServiceMockModule();
 });
 
 vi.mock("@/plugins/PluginHost", () => ({
@@ -66,22 +40,22 @@ const DEFAULT_SETTINGS: AppSettings = {
 describe("SettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.get("settingsGet").mockResolvedValue(structuredClone(DEFAULT_SETTINGS));
-    mocks.get("appVersion").mockResolvedValue("0.1.0");
-    mocks.get("profileList").mockResolvedValue([]);
-    mocks.get("profileActive").mockResolvedValue("");
-    mocks.get("settingsSave").mockResolvedValue(undefined);
-    mocks.get("pluginList").mockResolvedValue([]);
-    mocks.get("coreInstalled").mockResolvedValue([]);
-    mocks.get("coreListVersions").mockResolvedValue([]);
-    mocks.get("coreCurrent").mockResolvedValue(null);
-    mocks.get("cliStatus").mockResolvedValue({
+    serviceMock("settingsGet").mockResolvedValue(structuredClone(DEFAULT_SETTINGS));
+    serviceMock("appVersion").mockResolvedValue("0.1.0");
+    serviceMock("profileList").mockResolvedValue([]);
+    serviceMock("profileActive").mockResolvedValue("");
+    serviceMock("settingsSave").mockResolvedValue(undefined);
+    serviceMock("pluginList").mockResolvedValue([]);
+    serviceMock("coreInstalled").mockResolvedValue([]);
+    serviceMock("coreListVersions").mockResolvedValue([]);
+    serviceMock("coreCurrent").mockResolvedValue(null);
+    serviceMock("cliStatus").mockResolvedValue({
       installed: false, shimPath: null, binDirInPath: false, message: "",
     });
-    mocks.get("cliInstallShim").mockResolvedValue({
+    serviceMock("cliInstallShim").mockResolvedValue({
       installed: true, shimPath: "x", binDirInPath: true, message: "ok",
     });
-    mocks.get("updateCheck").mockResolvedValue(null);
+    serviceMock("updateCheck").mockResolvedValue(null);
   });
 
   it("renders loading state before settings arrive, then general tab with version", async () => {
@@ -97,8 +71,8 @@ describe("SettingsPage", () => {
     await waitFor(() => expect(container.textContent).toContain("外观"));
     const selects = screen.getAllByRole("combobox");
     fireEvent.change(selects[0] as HTMLSelectElement, { target: { value: "dark" } });
-    await waitFor(() => expect(mocks.get("settingsSave")).toHaveBeenCalledTimes(1));
-    const saved = (mocks.get("settingsSave").mock.calls[0]?.[0] ?? null) as AppSettings | null;
+    await waitFor(() => expect(serviceMock("settingsSave")).toHaveBeenCalledTimes(1));
+    const saved = (serviceMock("settingsSave").mock.calls[0]?.[0] ?? null) as AppSettings | null;
     expect(saved?.general.theme).toBe("dark");
   });
 
@@ -110,8 +84,8 @@ describe("SettingsPage", () => {
     // 端口输入（number input）修改后触发保存
     const portInput = screen.getByDisplayValue("3080") as HTMLInputElement;
     fireEvent.change(portInput, { target: { value: "4000" } });
-    await waitFor(() => expect(mocks.get("settingsSave")).toHaveBeenCalledTimes(1));
-    const saved = (mocks.get("settingsSave").mock.calls[0]?.[0] ?? null) as AppSettings | null;
+    await waitFor(() => expect(serviceMock("settingsSave")).toHaveBeenCalledTimes(1));
+    const saved = (serviceMock("settingsSave").mock.calls[0]?.[0] ?? null) as AppSettings | null;
     expect(saved?.dsh.port).toBe(4000);
   });
 
