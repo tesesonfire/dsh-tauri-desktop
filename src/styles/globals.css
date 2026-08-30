@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 主题颜色变量：供 shadcn 风格组件与插件读取 */
+  :root {
+    --background: 228 30% 100%;
+    --foreground: 228 30% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 228 30% 8%;
+    --primary: 227 100% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 20% 94%;
+    --secondary-foreground: 228 20% 15%;
+    --muted: 228 20% 95%;
+    --muted-foreground: 228 12% 45%;
+    --accent: 228 20% 92%;
+    --accent-foreground: 228 20% 12%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 18% 88%;
+    --input: 228 18% 84%;
+    --ring: 227 100% 65%;
+    --sidebar: 228 24% 97%;
+    --sidebar-foreground: 228 20% 15%;
+    --radius: 8px;
+
+    /* 供插件读取的品牌色 */
+    --brand-accent: #4d6bfe;
+    --brand-success: #22c55e;
+    --brand-warning: #f59e0b;
+    --brand-danger: #ef4444;
+  }
+
+  .dark {
+    --background: 228 28% 7%;
+    --foreground: 228 20% 92%;
+    --card: 228 24% 10%;
+    --card-foreground: 228 20% 92%;
+    --primary: 227 100% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 18% 15%;
+    --secondary-foreground: 228 20% 90%;
+    --muted: 228 18% 14%;
+    --muted-foreground: 228 12% 62%;
+    --accent: 228 18% 17%;
+    --accent-foreground: 228 20% 92%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 16% 20%;
+    --input: 228 16% 22%;
+    --ring: 227 100% 66%;
+    --sidebar: 228 24% 9%;
+    --sidebar-foreground: 228 20% 90%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+  .no-drag-region {
+    -webkit-app-region: no-drag;
+  }
+}
+
+/* dsh 子进程日志颜色高亮 */
+.log-line-info {
+  @apply text-foreground/90;
+}
+.log-line-error {
+  @apply text-destructive;
+}
+.log-line-warn {
+  @apply text-brand-warning;
+}
+.log-line-success {
+  @apply text-brand-success;
+}
+
+.text-brand-warning {
+  color: var(--brand-warning);
+}
+.text-brand-success {
+  color: var(--brand-success);
+}
