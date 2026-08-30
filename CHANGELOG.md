@@ -37,6 +37,9 @@
   未知平台回退、windowStore 平台记录
 - **UpdatePanel 失败降级与重启就绪测试（+2）**：检查更新网络失败时错误
   Toast 且面板可重试、下载应用后进入「立即重启」状态
+- **心跳与桥接守卫测试（+6）**：`pingDsh` 成功/拒绝/超时中止三态
+  （mock fetch，覆盖 no-cors 参数）、`isBridgeRequest` 对 8 种畸形
+  载荷的拒绝、`newBridgeId` 唯一性
 - **workflow_service 环境检查文案提取**：`env_message(node_ok, dsh_installed)`
   纯函数（Node 缺失优先于 dsh 缺失提示）+ 测试
 - **Toaster 全局渲染器测试（3 项）**：四类 Toast 的样式分支、点击关闭
