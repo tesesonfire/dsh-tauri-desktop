@@ -117,14 +117,30 @@ static GLOBAL_MANAGER: OnceLock<DshProcessManager> = OnceLock::new();
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 /// 全局共享 HTTP 客户端（下载、健康检查、更新共用）。
+///
+/// 若设置中配置了 HTTP 代理（settings.advanced.proxy）则启用之；
+/// 代理修改需重启应用生效（客户端为进程级单例）。
 pub fn http_client() -> reqwest::Client {
     HTTP_CLIENT
         .get_or_init(|| {
-            reqwest::Client::builder()
+            let mut builder = reqwest::Client::builder()
                 .user_agent("dsh-tauri-desktop")
-                .timeout(std::time::Duration::from_secs(30))
-                .build()
-                .unwrap_or_default()
+                .timeout(std::time::Duration::from_secs(30));
+            let settings =
+                crate::models::settings::AppSettings::load(&path::settings_file());
+            let proxy = settings.advanced.proxy.trim().to_string();
+            if !proxy.is_empty() {
+                match reqwest::Proxy::all(&proxy) {
+                    Ok(proxy_builder) => {
+                        builder = builder.proxy(proxy_builder);
+                        tracing::info!("HTTP 客户端启用代理: {proxy}");
+                    }
+                    Err(err) => {
+                        tracing::warn!("代理地址无效({proxy})，直连: {err}");
+                    }
+                }
+            }
+            builder.build().unwrap_or_default()
         })
         .clone()
 }

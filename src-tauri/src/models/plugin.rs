@@ -106,18 +106,10 @@ pub struct SettingEntry {
 }
 
 /// 主题贡献：注入 CSS 变量。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ThemeContribution {
     pub css_variables: BTreeMap<String, String>,
-}
-
-impl Default for ThemeContribution {
-    fn default() -> Self {
-        Self {
-            css_variables: BTreeMap::new(),
-        }
-    }
 }
 
 /// 插件 contributes：声明其对 UI 的扩展点。

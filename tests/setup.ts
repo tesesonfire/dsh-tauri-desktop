@@ -17,3 +17,8 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
     }) as MediaQueryList,
   });
 }
+
+// jsdom 未实现 scrollIntoView（DshLogs 自动滚动等需要）
+if (typeof Element !== "undefined" && typeof Element.prototype.scrollIntoView !== "function") {
+  Element.prototype.scrollIntoView = (): void => undefined;
+}

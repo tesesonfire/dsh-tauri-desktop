@@ -55,8 +55,18 @@ export default function PluginMarketPage(): React.ReactElement {
   const installPreset = async (preset: PresetPlugin): Promise<void> => {
     setInstalling((list) => [...list, preset.id]);
     try {
-      // 预设插件以内置包形式随应用分发；此处将其注册到用户启用列表
-      toast.success(`${preset.name} 已就绪（内置分发）`);
+      const existing = usePluginStore
+        .getState()
+        .plugins.find((p) => p.manifest.id === preset.id);
+      if (existing !== undefined) {
+        // 随应用内置分发的预设：直接启用
+        await usePluginStore.getState().enable(preset.id, true);
+        toast.success(`${preset.name} 已启用`);
+      } else {
+        // 社区预设：0.1.0 暂无下载源，记入待安装列表（远程源就绪后一键安装）
+        localStorage.setItem(`dsh-preset-pending-${preset.id}`, preset.name);
+        toast.warn(`${preset.name} 暂无可下载源，已加入待安装列表`);
+      }
       await refresh();
     } catch (err) {
       toast.error(String(err));

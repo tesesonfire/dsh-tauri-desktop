@@ -284,16 +284,13 @@ pub fn resolve_entry(version_dir: &Path) -> Option<PathBuf> {
             }
         }
     }
-    for candidate in [
+    [
         version_dir.join("bin").join("dsh.js"),
         version_dir.join("bin").join("dsh.mjs"),
         version_dir.join("dist").join("cli.js"),
-    ] {
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-    None
+    ]
+    .into_iter()
+    .find(|candidate| candidate.exists())
 }
 
 /// 解析实际启动用的 dsh 入口：

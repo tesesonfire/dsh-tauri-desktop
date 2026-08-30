@@ -85,7 +85,7 @@ impl Default for AdvancedConfig {
 }
 
 /// 应用设置根对象。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppSettings {
     /// 首次启动引导是否已完成。
@@ -95,18 +95,6 @@ pub struct AppSettings {
     pub general: GeneralConfig,
     pub dsh: DshConfig,
     pub advanced: AdvancedConfig,
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            onboarded: false,
-            active_profile: String::new(),
-            general: GeneralConfig::default(),
-            dsh: DshConfig::default(),
-            advanced: AdvancedConfig::default(),
-        }
-    }
 }
 
 impl AppSettings {

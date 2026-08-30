@@ -279,16 +279,18 @@ pub fn plugin_roots(app: &tauri::AppHandle) -> Vec<PathBuf> {
 
 /// 按 id 解析插件根目录。
 pub fn plugin_dir(app: &tauri::AppHandle, id: &str) -> Option<PathBuf> {
-    id.split(['/', '\\']).last().and_then(|safe_id| {
-        // 防穿越：只取最后一段
-        if safe_id.contains("..") {
-            return None;
-        }
-        plugin_roots(app)
-            .into_iter()
-            .map(|root| root.join(safe_id))
-            .find(|dir| dir.is_dir())
-    })
+    id.rsplit(['/', '\\'])
+        .next()
+        .and_then(|safe_id| {
+            // 防穿越：只取最后一段
+            if safe_id.contains("..") {
+                return None;
+            }
+            plugin_roots(app)
+                .into_iter()
+                .map(|root| root.join(safe_id))
+                .find(|dir| dir.is_dir())
+        })
 }
 
 /// 查询插件是否启用（未注册过视为启用）。

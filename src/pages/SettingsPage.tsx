@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PluginList } from "@/components/PluginList";
 import { UpdatePanel } from "@/components/UpdatePanel";
 import { CliPanel } from "@/components/CliPanel";
+import { CoreManagerPanel } from "@/components/CoreManagerPanel";
 import { useTheme } from "@/hooks/useTheme";
 import { useProfileStore } from "@/stores/profileStore";
 import { toast } from "@/stores/toastStore";
@@ -220,6 +221,7 @@ function DshTab(props: {
           </Row>
         </CardContent>
       </Card>
+      <CoreManagerPanel />
       <CliPanel />
     </div>
   );

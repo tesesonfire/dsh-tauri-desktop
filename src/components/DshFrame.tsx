@@ -22,7 +22,10 @@ export function DshFrame(): React.ReactElement {
     [status?.host, status?.port],
   );
 
-  const running = status?.state === "running" && connect !== "stopped";
+  const running =
+    status?.state === "running" &&
+    connect !== "stopped" &&
+    connect !== "disconnected";
   const showOverlay = !running;
 
   const overlayContent = (): React.ReactNode => {

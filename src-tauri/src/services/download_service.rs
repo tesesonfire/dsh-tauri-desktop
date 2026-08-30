@@ -148,7 +148,7 @@ async fn run_download(
     use std::io::Write;
     loop {
         if cancel.load(Ordering::SeqCst) {
-            let _ = DownloadManager::emit_progress(app, id, &url, &dest, downloaded, total, 0, true);
+            let _ = DownloadManager::emit_progress(app, make_progress(id, &url, &dest, downloaded, total, 0, true));
             return Err(AppError::Cancelled(id.to_string()));
         }
         let chunk = match tokio::time::timeout(std::time::Duration::from_secs(60), stream.next())
@@ -169,7 +169,7 @@ async fn run_download(
             let window_secs = now.duration_since(last_emit).as_secs_f64().max(0.001);
             let speed =
                 ((downloaded - last_downloaded) as f64 / window_secs) as u64;
-            DownloadManager::emit_progress(app, id, &url, &dest, downloaded, total, speed, false)?;
+            DownloadManager::emit_progress(app, make_progress(id, &url, &dest, downloaded, total, speed, false))?;
             last_emit = now;
             last_downloaded = downloaded;
         }
@@ -180,39 +180,41 @@ async fn run_download(
     if part_file.exists() {
         std::fs::rename(&part_file, &dest)?;
     }
-    DownloadManager::emit_progress(app, id, &url, &dest, downloaded, Some(downloaded), 0, true)?;
+    DownloadManager::emit_progress(app, make_progress(id, &url, &dest, downloaded, Some(downloaded), 0, true))?;
     tracing::info!("下载完成: {url} -> {}", dest.display());
     Ok(())
 }
 
 impl DownloadManager {
     /// 构造并发送进度事件；失败仅记日志（不中断下载）。
-    fn emit_progress(
-        app: &tauri::AppHandle,
-        id: &str,
-        url: &str,
-        dest: &std::path::Path,
-        downloaded: u64,
-        total: Option<u64>,
-        speed_bps: u64,
-        done: bool,
-    ) -> AppResult<()> {
-        let percent = total.map(|t| (downloaded as f64 / t.max(1) as f64) * 100.0);
-        app.emit(
-            DOWNLOAD_EVENT,
-            DownloadProgress {
-                id: id.to_string(),
-                url: url.to_string(),
-                dest: dest.to_string_lossy().into_owned(),
-                downloaded,
-                total,
-                percent,
-                speed_bps,
-                done,
-                error: None,
-            },
-        )?;
+    fn emit_progress(app: &tauri::AppHandle, progress: DownloadProgress) -> AppResult<()> {
+        app.emit(DOWNLOAD_EVENT, progress)?;
         Ok(())
+    }
+}
+
+/// 按字段组装进度事件负载。
+#[allow(clippy::too_many_arguments)]
+fn make_progress(
+    id: &str,
+    url: &str,
+    dest: &std::path::Path,
+    downloaded: u64,
+    total: Option<u64>,
+    speed_bps: u64,
+    done: bool,
+) -> DownloadProgress {
+    let percent = total.map(|t| (downloaded as f64 / t.max(1) as f64) * 100.0);
+    DownloadProgress {
+        id: id.to_string(),
+        url: url.to_string(),
+        dest: dest.to_string_lossy().into_owned(),
+        downloaded,
+        total,
+        percent,
+        speed_bps,
+        done,
+        error: None,
     }
 }
 

@@ -16,12 +16,8 @@ pub fn plugin_list(app: AppHandle) -> AppResult<Vec<PluginInfo>> {
 
 /// 从本地路径安装插件。
 #[tauri::command]
-pub fn plugin_install(app: AppHandle, path: String) -> AppResult<PluginInfo> {
+pub fn plugin_install(path: String) -> AppResult<PluginInfo> {
     plugin_service::install_from_path(std::path::Path::new(&path))
-        .map(|info| {
-            let _ = &app;
-            info
-        })
 }
 
 /// 卸载插件。
