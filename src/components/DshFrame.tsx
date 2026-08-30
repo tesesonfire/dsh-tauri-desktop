@@ -47,7 +47,12 @@ export function DshFrame(): React.ReactElement {
         </div>
       );
     }
-    if (connect === "stopped" || status === null || ["idle", "stopped"].includes(status.state)) {
+    if (
+      connect === "stopped" ||
+      status === null ||
+      status === undefined ||
+      ["idle", "stopped"].includes(status.state)
+    ) {
       return (
         <div className="flex max-w-md flex-col items-center gap-3 text-center">
           <p className="text-sm font-medium">dsh 服务未启动</p>

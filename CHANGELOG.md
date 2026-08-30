@@ -7,6 +7,12 @@
 ## [Unreleased]
 
 ### Added
+- **MainPage 集成测试（5 项）**：核心过期横幅显隐与版本文案、
+  右侧插件面板坞显隐/标签/禁用插件宿主剔除
+- **CliPanel / Sidebar 组件测试（6 项）**：CLI 注册状态流转、
+  dsh 启动/停止/重启按钮随状态切换、状态元数据与错误块、档案切换
+- **plugin_service 扫描测试（+3）**：合法/非法 manifest/非插件目录、
+  缺失根目录容错、多根扫描的 builtin 标记
 - **pluginStore / profileStore 状态单测补齐（12 项）**：桥接注册的
   pluginId 前缀语义、反注册清理 activeSidebarId、panel 去重、
   档案删除时活动档案回落、后端错误透出
@@ -53,6 +59,8 @@
 
 ### Changed
 - `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
+- DshFrame 状态空值防御：`dsh_status` 返回 undefined（契约漂移/异常）时
+  按「服务未启动」渲染而非崩溃（MainPage 集成测试暴露）
 - 预设卡片按 `pluginId` 映射到真实插件（此前误用预设 id 匹配 manifest.id）
 - `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）
 - 内部下载流程改用同步等待式 `download_file_direct`（进度事件保留）

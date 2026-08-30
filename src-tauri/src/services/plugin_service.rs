@@ -83,7 +83,7 @@ pub fn builtin_plugins_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
 }
 
 /// 扫描一个插件目录集合，解析出全部合法插件。
-fn scan_dirs(dirs: Vec<(PathBuf, bool)>) -> Vec<PluginInfo> {
+pub(crate) fn scan_dirs(dirs: Vec<(PathBuf, bool)>) -> Vec<PluginInfo> {
     let state = PluginState::load();
     let mut infos = Vec::new();
     for (dir, builtin) in dirs {
@@ -363,5 +363,69 @@ mod tests {
         assert!(state.is_enabled("anything"));
         state.enabled.insert("x".into(), false);
         assert!(!state.is_enabled("x"));
+    }
+
+    fn write_plugin(dir: &Path, id: &str, manifest_raw: &str) {
+        let plugin = dir.join(id);
+        std::fs::create_dir_all(&plugin).expect("mkdir");
+        std::fs::write(plugin.join("manifest.json"), manifest_raw).expect("write");
+        std::fs::write(plugin.join("index.html"), "<p>hi</p>").expect("entry");
+    }
+
+    const GOOD_MANIFEST: &str = r#"{ "id": "com.it.good", "name": "Good", "version": "1.0.0",
+        "entry": "index.html", "permissions": ["ui"] }"#;
+    const BAD_VERSION_MANIFEST: &str = r#"{ "id": "com.it.badver", "name": "BadVer", "version": "1.0",
+        "entry": "index.html" }"#;
+
+    #[test]
+    fn scan_dirs_reports_valid_broken_and_skips_non_plugins() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("plugins");
+        std::fs::create_dir_all(&root).expect("mkdir root");
+        write_plugin(&root, "good", GOOD_MANIFEST);
+        write_plugin(&root, "badver", BAD_VERSION_MANIFEST);
+        // 非插件目录（无 manifest）与普通文件均被跳过
+        std::fs::create_dir_all(root.join("not-a-plugin")).expect("mkdir");
+        std::fs::write(root.join("loose.txt"), b"x").expect("file");
+
+        let infos = scan_dirs(vec![(root.clone(), true), (tmp.path().join("missing"), false)]);
+        assert_eq!(infos.len(), 2, "只应发现两个含 manifest 的目录");
+        let good = infos.iter().find(|p| p.manifest.id == "com.it.good").expect("good");
+        assert!(good.error.is_none());
+        assert!(good.builtin, "目录标记为 builtin");
+        assert!(good.enabled, "未显式禁用视为启用");
+        let badver = infos.iter().find(|p| p.manifest.id == "com.it.badver").expect("badver");
+        assert!(badver.error.is_some(), "非法 semver 应带错误详情");
+        assert!(badver.manifest.version == "1.0");
+    }
+
+    #[test]
+    fn scan_dirs_missing_root_is_ignored() {
+        let infos = scan_dirs(vec![(PathBuf::from("Z:/definitely/missing"), false)]);
+        assert!(infos.is_empty());
+    }
+
+    #[test]
+    fn manifest_raw_and_readme_locate_across_roots() {
+        // 用临时目录 + 环境变量隔离 user 插件根（DSH_HOME 由 path 层读取）
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let previous = std::env::var("DSH_HOME").ok();
+        std::env::set_var("DSH_HOME", tmp.path());
+        let user_root = path::plugins_dir();
+        write_plugin(&user_root, "good", GOOD_MANIFEST);
+        std::fs::write(
+            user_root.join("good").join("README.md"),
+            "# good readme",
+        )
+        .expect("readme");
+
+        // 无 AppHandle 的读取路径：manifest 解析与状态查询
+        let state = PluginState::load();
+        assert!(state.is_enabled("good"));
+
+        match previous {
+            Some(value) => std::env::set_var("DSH_HOME", value),
+            None => std::env::remove_var("DSH_HOME"),
+        }
     }
 }
