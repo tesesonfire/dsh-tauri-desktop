@@ -44,9 +44,7 @@ pub fn create(name: &str, port: u16) -> AppResult<Profile> {
     let name = path::sanitize_name(name)?;
     let _guard = STORE_LOCK.lock().map_err(|_| AppError::Internal("档案锁中毒".into()))?;
     let mut profiles = read_all()?;
-    if profiles.iter().any(|p| p.id == name || p.name == name) {
-        return Err(AppError::InvalidInput(format!("档案 {name} 已存在")));
-    }
+    ensure_not_duplicate(&profiles, &name)?;
     let dsh_home = path::profile_dir(&name).to_string_lossy().into_owned();
     let profile = Profile::new(name.clone(), name.clone(), dsh_home.clone(), port);
     path::ensure_dir(&path::profile_dir(&name))?;
@@ -66,15 +64,28 @@ pub fn create(name: &str, port: u16) -> AppResult<Profile> {
     Ok(profile)
 }
 
+/// 档案唯一性校验（id 与 name 都不允许重复）——create 与 import 共用。
+pub(crate) fn ensure_not_duplicate(profiles: &[Profile], name: &str) -> AppResult<()> {
+    if profiles.iter().any(|p| p.id == name || p.name == name) {
+        return Err(AppError::InvalidInput(format!("档案 {name} 已存在")));
+    }
+    Ok(())
+}
+
+/// 按 id 删除条目；未命中时报 NotFound（保持 delete 的显式语义）。
+pub(crate) fn retain_existing(profiles: Vec<Profile>, id: &str) -> AppResult<Vec<Profile>> {
+    let before = profiles.len();
+    let retained: Vec<Profile> = profiles.into_iter().filter(|p| p.id != id).collect();
+    if retained.len() == before {
+        return Err(AppError::NotFound(format!("档案 {id} 不存在")));
+    }
+    Ok(retained)
+}
+
 /// 删除档案（同时清理隔离目录）。
 pub fn delete(id: &str) -> AppResult<()> {
     let _guard = STORE_LOCK.lock().map_err(|_| AppError::Internal("档案锁中毒".into()))?;
-    let mut profiles = read_all()?;
-    let before = profiles.len();
-    profiles.retain(|p| p.id != id);
-    if profiles.len() == before {
-        return Err(AppError::NotFound(format!("档案 {id} 不存在")));
-    }
+    let profiles = retain_existing(read_all()?, id)?;
     write_all(&profiles)?;
     let dir = path::profile_dir(id);
     if dir.exists() {
@@ -110,9 +121,7 @@ pub fn import(src: &std::path::Path) -> AppResult<Profile> {
     let name = path::sanitize_name(&imported.id)?;
     let _guard = STORE_LOCK.lock().map_err(|_| AppError::Internal("档案锁中毒".into()))?;
     let mut profiles = read_all()?;
-    if profiles.iter().any(|p| p.id == name) {
-        return Err(AppError::InvalidInput(format!("档案 {name} 已存在，无法导入")));
-    }
+    ensure_not_duplicate(&profiles, &name)?;
     let profile = Profile::new(
         name.clone(),
         imported.name.clone(),
@@ -142,5 +151,27 @@ mod tests {
         let back: Profile = serde_json::from_str(&json).expect("back");
         assert_eq!(back.id, "dev");
         assert_eq!(back.default_port, 3080);
+    }
+
+    #[test]
+    fn ensure_not_duplicate_rejects_id_and_name_clash() {
+        let existing = vec![Profile::new("dev".into(), "dev".into(), "/x".into(), 3080)];
+        assert!(ensure_not_duplicate(&existing, "dev").is_err(), "同名 id 拒绝");
+        assert!(ensure_not_duplicate(&existing, "other").is_ok(), "新名放行");
+        // name 字段与请求冲突（id 不同）也应拒绝
+        let named = vec![Profile::new("id-x".into(), "dev".into(), "/x".into(), 3080)];
+        assert!(ensure_not_duplicate(&named, "dev").is_err(), "同名 name 拒绝");
+    }
+
+    #[test]
+    fn retain_existing_reports_missing_target() {
+        let profiles = vec![
+            Profile::new("a".into(), "a".into(), "/x".into(), 3080),
+            Profile::new("b".into(), "b".into(), "/y".into(), 3081),
+        ];
+        let kept = retain_existing(profiles.clone(), "a").expect("delete a");
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].id, "b");
+        assert!(retain_existing(profiles, "missing").is_err(), "未命中应报 NotFound");
     }
 }

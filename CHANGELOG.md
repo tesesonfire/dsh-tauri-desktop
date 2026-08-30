@@ -7,6 +7,11 @@
 ## [Unreleased]
 
 ### Added
+- **SettingsPage 测试（4 项）**：加载态/版本号渲染、通用页主题切换保存、
+  dsh 配置页端口修改持久化、高级页白名单内容展示
+- **profile_service 纯逻辑提取**：`ensure_not_duplicate`（id/name 双重
+  唯一性，create 与 import 共用）与 `retain_existing`（删除未命中显式
+  NotFound）+ 单元测试（+2）
 - **MainPage 集成测试（5 项）**：核心过期横幅显隐与版本文案、
   右侧插件面板坞显隐/标签/禁用插件宿主剔除
 - **CliPanel / Sidebar 组件测试（6 项）**：CLI 注册状态流转、
@@ -61,6 +66,9 @@
 - `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
 - DshFrame 状态空值防御：`dsh_status` 返回 undefined（契约漂移/异常）时
   按「服务未启动」渲染而非崩溃（MainPage 集成测试暴露）
+- pluginStore/profileStore 的 refresh 对空响应做归一化
+  （`pluginList`/`profileList` 返回 undefined 时按空列表处理，不再崩溃）
+- TROUBLESHOOTING 新增插件市场类与 e2e/WebDriver 排错章节
 - 预设卡片按 `pluginId` 映射到真实插件（此前误用预设 id 匹配 manifest.id）
 - `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）
 - 内部下载流程改用同步等待式 `download_file_direct`（进度事件保留）

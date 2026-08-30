@@ -29,7 +29,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     set({ loading: true });
     try {
       const [profiles, activeId] = await Promise.all([profileList(), profileActive()]);
-      set({ profiles, activeId, error: null });
+      // 后端契约兜底：异常/漂移时按空列表处理而非崩溃
+      set({ profiles: profiles ?? [], activeId: activeId ?? "", error: null });
     } catch (err) {
       set({ error: String(err) });
     } finally {

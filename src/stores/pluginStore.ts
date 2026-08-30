@@ -50,7 +50,7 @@ export const usePluginStore = create<PluginState>((set, get) => ({
   refresh: async () => {
     set({ loading: true });
     try {
-      const plugins = await pluginList();
+      const plugins = (await pluginList()) ?? [];
       set({
         plugins,
         sidebarEntries: collectSidebarEntries(plugins),

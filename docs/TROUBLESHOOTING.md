@@ -94,6 +94,40 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 dsh-tauri-desktop
 dsh Web UI 依赖自身资源，均从 dsh 服务加载；若使用了浏览器扩展类代理，
 检查代理是否劫持了 `127.0.0.1:3080`（本地地址建议加入直连名单）。
 
+## 插件市场类
+
+### 「GitHub 搜索失败」/「下载超时」
+- 市场搜索（`api.github.com`）与安装下载（zipball 重定向）都要求能访问
+  GitHub；内网环境在 设置 → 高级 中配置代理后重启应用生效。
+- 应用内置了官方插件注册表快照，**离线时官方列表仍可浏览**，仅安装需要网络。
+- 环境变量 `DSH_MARKET_REGISTRY_URL` 可指向自建 marketplace.json
+  （格式见 `src-tauri/resources/marketplace.json`）。
+
+### 「仓库中未找到 manifest.json」
+安装要求仓库（或其子目录）中存在 `manifest.json`。社区仓库若是单插件，
+把 manifest 放在仓库根目录；monorepo 需要在注册表中标注插件子目录
+（如 `packages/<name>`）。应用会自动扫描浅层目录（深度 ≤ 3，跳过
+node_modules/dist/target），仍找不到才会报错。
+
+### 「仓库标识非法」
+安装目标必须是 `owner/repo` 形式；URL、多级路径、路径穿越、空白写法会被拒绝。
+
+### 安装成功但插件报错
+查看 设置 → 插件 的错误详情；常见原因是 manifest 校验失败（id/entry 非法）
+或 entry 指向的 HTML 不存在。升级插件后建议重启应用使桥接重新握手。
+
+## e2e / WebDriver 排错
+
+### `cargo test --test webdriver_e2e` 一直跳过
+该测试默认跳过，需要三件事同时满足：
+1. `DSH_E2E=1`；2. `DSH_E2E_APP` 指向已构建的应用 exe；3. tauri-driver 已启动
+（`cargo install tauri-driver --locked` 后运行 `tauri-driver`，默认 4444 端口，
+可用 `DSH_E2E_WD_URL` 改址）。详见 tests/e2e/README.md。
+
+### Windows 上 tauri-driver 报 WebDriver 找不到
+tauri-driver 在 Windows 依赖 Microsoft Edge 的 msedgedriver；确认 Edge 已安装，
+或按 tauri-driver 文档放置对应版本的驱动。
+
 ## 自更新类
 
 ### 「检查更新失败」
