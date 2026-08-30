@@ -10,7 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use dsh_tauri_desktop::models::settings::AppSettings;
-use dsh_tauri_desktop::services::{plugin_service, profile_service};
+use dsh_tauri_desktop::services::{core_service, plugin_service, profile_service};
 use dsh_tauri_desktop::utils::path;
 
 /// 构造一个最小合法插件目录（manifest + entry + README）。
@@ -150,6 +150,42 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
         "删除后隔离目录应清理"
     );
     assert!(profile_service::delete("it-profile").is_err(), "重复删除应 NotFound");
+
+    // ---------- 场景 5c：dsh 核心多版本管理（切换/删除/当前指针） ----------
+    fn install_fake_core(version: &str) -> PathBuf {
+        let dir = path::dependencies_dir().join(version);
+        let bin = dir.join("bin");
+        fs::create_dir_all(&bin).expect("mkdir core");
+        fs::write(bin.join("dsh.js"), "// entry").expect("write entry");
+        dir
+    }
+    install_fake_core("0.1.0");
+    install_fake_core("0.2.0");
+
+    // 切换：写 CURRENT 指针（容忍 v 前缀）；未安装版本报 NotFound
+    core_service::use_version("v0.1.0").expect("use 0.1.0");
+    let current_raw = fs::read_to_string(path::core_current_file()).expect("read CURRENT");
+    assert_eq!(current_raw.trim(), "0.1.0");
+    assert!(core_service::use_version("9.9.9").is_err(), "未安装版本切换应拒绝");
+
+    // 列表：is_current 标记 + entry 解析
+    let installed_list = core_service::installed_versions().expect("installed");
+    assert_eq!(installed_list.len(), 2);
+    let current_item = installed_list
+        .iter()
+        .find(|c| c.version == "0.1.0")
+        .expect("0.1.0 item");
+    assert!(current_item.is_current);
+    assert!(current_item.entry.as_deref().is_some_and(|e| e.ends_with("dsh.js")));
+
+    // 删除：当前版本拒绝；非当前版本删除后目录消失；未安装报 NotFound
+    assert!(
+        core_service::remove_version("0.1.0").is_err(),
+        "删除正在使用的版本必须被拒绝"
+    );
+    core_service::remove_version("0.2.0").expect("remove 0.2.0");
+    assert!(!path::dependencies_dir().join("0.2.0").exists());
+    assert!(core_service::remove_version("0.2.0").is_err(), "重复删除应 NotFound");
 
     // ---------- 恢复环境 ----------
     match previous {

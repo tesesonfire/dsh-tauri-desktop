@@ -12,6 +12,13 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
+- **lifecycle 集成测试再扩展 dsh 核心多版本管理**：CURRENT 指针切换
+  （容忍 v 前缀）、未安装版本拒绝、`installed_versions` 的 is_current
+  与 entry 解析、当前版本删除拒绝、非当前版本删除目录清理、重复删除
+  NotFound
+- **e2e 场景 3 前端联动测试（3 项，`scenario3Linkage.test.tsx`）**：
+  运行/停止/崩溃+重启计数三种状态下，状态徽章、启动/停止按钮组与
+  日志面板（含 error 级别过滤）随同一 store 同步联动
 - **Permission 权限映射全量测试（+2）**：7 类权限 → 桥接方法组逐一钉住
   （notification 复用 `ui` 组）、未知权限在 `FromStr` 与 JSON 反序列化
   两个层面均被拒绝
