@@ -120,11 +120,15 @@ await client.registerContextMenu({ scope: "session", id: "m1", title: "归档", 
 await client.showNotification("标题", "内容");
 
 /* 事件 */
-client.on("theme.changed", (theme) => { ... });
+client.on("theme.changed", (theme) => { ... });   // 订阅，返回取消函数
 client.on("dsh.state", (status) => { ... });
+client.once("dsh.state", handler);                // 一次性订阅（触发后自动移除）
+client.off("theme.changed", handler);             // 显式反订阅
+const next = await client.waitForEvent("dsh.state", 5000); // 等待下一次事件，超时 reject
 ```
 
 各方法返回值错误时 Promise reject（`error` 字符串包装为 Error）。
+SDK 行为由 `plugins/sdk/test/bridge-client.test.ts` 单元测试覆盖。
 
 ## 5. 最小示例插件
 

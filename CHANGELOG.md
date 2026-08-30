@@ -7,6 +7,15 @@
 ## [Unreleased]
 
 ### Added
+- **插件 SDK 事件能力增强**：`once`（一次性订阅）、`off`（显式反订阅）、
+  `waitForEvent(method, timeoutMs?)`（等待下一次事件，超时 reject）；
+  新增 `plugins/sdk/test/bridge-client.test.ts` 覆盖调用往返、错误/超时、
+  订阅语义（8 项）
+- **dsh 日志面板过滤**：级别过滤（all/error/warn/success）+ 关键字
+  大小写不敏感搜索，`filterLogLines` 纯函数 + 组件交互测试（8 项）
+- **插件生命周期服务层集成测试**（`src-tauri/tests/lifecycle.rs`，对齐
+  e2e 场景 4/5）：临时 `DSH_HOME` 下走真实服务栈 —— 设置持久化、
+  插件安装/禁用/启用/KV 存储隔离/卸载语义/非法 manifest 拒绝
 - **插件市场正式版**：官方插件注册表（对齐 dsh-tauri-desk/dsh-tauri-plugins，
   远程 marketplace.json 优先、离线回退编译期内置快照）、GitHub 社区插件搜索
   （Search API，按 star 排序）、仓库 zipball 一键安装（下载 → 解压 → 自动定位

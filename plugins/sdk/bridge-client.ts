@@ -161,6 +161,34 @@ export class BridgeClient {
     return () => handlers.delete(handler);
   }
 
+  /** 显式反订阅（on 返回的取消函数的别名，便于按名移除） */
+  off(method: string, handler: (payload: unknown) => void): void {
+    this.eventHandlers.get(method)?.delete(handler);
+  }
+
+  /** 一次性订阅：触发后自动移除；返回取消函数（在触发前手动取消）。 */
+  once(method: string, handler: (payload: unknown) => void): () => void {
+    const wrapped = (payload: unknown): void => {
+      this.off(method, wrapped);
+      handler(payload);
+    };
+    return this.on(method, wrapped);
+  }
+
+  /** 等待下一次事件；超时（默认 30s）以 Error reject。 */
+  waitForEvent<T = unknown>(method: string, timeoutMs?: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const cancel = this.once(method, (payload) => {
+        clearTimeout(timer);
+        resolve(payload as T);
+      });
+      const timer = setTimeout(() => {
+        cancel();
+        reject(new Error(`waitForEvent timeout: ${method}`));
+      }, timeoutMs ?? 30000);
+    });
+  }
+
   /* ---------- 便捷 API ---------- */
 
   storageGet(key: string): Promise<string | null> {
