@@ -33,7 +33,7 @@ export default function MainPage(): React.ReactElement {
           <>
             <DshFrame />
             <div className="h-48 shrink-0 border-t">
-              <DshLogs className="h-full w-full rounded-none border-0" />
+              <DshLogs className="h-full w-full rounded-none border-0" collapsible={true} />
             </div>
           </>
         )}

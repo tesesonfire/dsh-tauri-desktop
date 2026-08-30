@@ -646,6 +646,16 @@ pub fn shutdown_all() {
     }
 }
 
+/// 从 `node --version` 输出解析主版本号（如 "v22.3.0" -> 22）。
+pub fn parse_node_major_version(version_output: &str) -> Option<u32> {
+    version_output
+        .trim()
+        .trim_start_matches('v')
+        .split('.')
+        .next()
+        .and_then(|major| major.parse::<u32>().ok())
+}
+
 /// 环境检查：Node 运行时 + dsh 安装情况。
 pub async fn env_check() -> EnvCheckResult {
     let node_path = which_node();
@@ -663,16 +673,8 @@ pub async fn env_check() -> EnvCheckResult {
         }
         None => None,
     };
-    let node_ok = node_version
-        .as_deref()
-        .map(|v| {
-            v.trim_start_matches('v')
-                .split('.')
-                .next()
-                .and_then(|major| major.parse::<u32>().ok())
-                .map(|major| major >= 18)
-                .unwrap_or(false)
-        })
+    let node_ok = parse_node_major_version(node_version.as_deref().unwrap_or(""))
+        .map(|major| major >= 18)
         .unwrap_or(false);
 
     let dsh_entry = core_service::resolve_active_entry().ok();
@@ -699,6 +701,15 @@ pub async fn env_check() -> EnvCheckResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn node_major_version_parsing() {
+        assert_eq!(parse_node_major_version("v22.3.0"), Some(22));
+        assert_eq!(parse_node_major_version("18.0.1"), Some(18));
+        assert_eq!(parse_node_major_version("v6.17.1\n"), Some(6));
+        assert_eq!(parse_node_major_version(""), None);
+        assert_eq!(parse_node_major_version("not a version"), None);
+    }
 
     #[test]
     fn classify_lines() {

@@ -25,6 +25,23 @@ pub struct CliStatus {
 const SHELL_BLOCK_BEGIN: &str = "# >>> dsh-tauri-desktop >>>";
 const SHELL_BLOCK_END: &str = "# <<< dsh-tauri-desktop <<<";
 
+/// 解析 `reg query HKCU\Environment /v Path` 输出中的当前 PATH 值
+/// （取类型标记 REG_EXPAND_SZ / REG_SZ 之后的部分；无匹配返回空串）。
+fn parse_reg_path_value(reg_output: &str) -> String {
+    reg_output
+        .lines()
+        .find(|line| line.trim_start().to_uppercase().starts_with("PATH"))
+        .map(|line| {
+            for marker in ["REG_EXPAND_SZ", "REG_SZ"] {
+                if let Some(pos) = line.find(marker) {
+                    return line[pos + marker.len()..].trim().to_string();
+                }
+            }
+            String::new()
+        })
+        .unwrap_or_default()
+}
+
 /// Windows 批处理 shim 内容（转发全部参数给 dsh 核心）。
 fn cmd_shim_content(entry: &str) -> String {
     format!(
@@ -80,19 +97,7 @@ async fn install_windows(entry: &str) -> AppResult<CliStatus> {
 
     let already = stdout.to_lowercase().contains(&bin_dir_str.to_lowercase());
     if !already {
-        // 解析 reg query 输出中的当前 PATH 值（REG_EXPAND_SZ 或 REG_SZ 类型标记之后）
-        let current = stdout
-            .lines()
-            .find(|line| line.trim_start().to_uppercase().starts_with("PATH"))
-            .map(|line| {
-                for marker in ["REG_EXPAND_SZ", "REG_SZ"] {
-                    if let Some(pos) = line.find(marker) {
-                        return line[pos + marker.len()..].trim().to_string();
-                    }
-                }
-                String::new()
-            })
-            .unwrap_or_default();
+        let current = parse_reg_path_value(&stdout);
         let new_path = if current.is_empty() {
             bin_dir_str.clone()
         } else {
@@ -197,6 +202,18 @@ pub async fn status() -> CliStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reg_path_parsing() {
+        let output = "\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    REG_EXPAND_SZ    C:\\bin;D:\\tools\r\n";
+        assert_eq!(parse_reg_path_value(output), "C:\\bin;D:\\tools");
+
+        let sz_output = "\n    Path    REG_SZ    C:\\only\n";
+        assert_eq!(parse_reg_path_value(sz_output), "C:\\only");
+
+        assert_eq!(parse_reg_path_value("no path here"), "");
+        assert_eq!(parse_reg_path_value(""), "");
+    }
 
     #[test]
     fn cmd_shim_forwards_args() {
