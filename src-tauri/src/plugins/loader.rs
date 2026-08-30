@@ -112,6 +112,16 @@ pub fn path_in_allowlist(target: &Path, allowlist: &[String]) -> bool {
     if allowlist.is_empty() {
         return false;
     }
+    // 插件传入的路径不允许 `..` 父目录组件：raw 回退分支（路径尚不存在时）
+    // 只做组件前缀比较、不解析 `..`，`base/../evil` 会以组件前缀匹配放行，
+    // 而后续文件操作会按真实路径解析，构成越界写入。（已存在的路径由
+    // canonicalize 真实解析，本就安全；这里统一收紧。）
+    let has_parent_component = target
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir));
+    if has_parent_component {
+        return false;
+    }
     let normalized = normalize_existing(target);
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"));
     allowlist.iter().any(|allowed| {
@@ -225,6 +235,24 @@ mod tests {
         let list = vec!["Z:/nonexistent-dsh-root".to_string()];
         let target = PathBuf::from("Z:/nonexistent-dsh-root/a/b.txt");
         assert!(path_in_allowlist(&target, &list));
+    }
+
+    #[test]
+    fn allowlist_rejects_parent_dir_components() {
+        // fs.write 的真实漏洞利用路径：目标尚不存在 → raw 前缀匹配分支，
+        // `base/../evil` 以组件前缀放行，而 std::fs 写入时解析 `..` 越界。
+        // 白名单必须在入口处拒绝含 `..` 的目标。
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let base = tmp.path().join("base");
+        std::fs::create_dir_all(&base).expect("mkdir");
+        let list = vec![base.to_string_lossy().into_owned()];
+        let escape = base.join("..").join("evil.txt");
+        assert!(
+            !path_in_allowlist(&escape, &list),
+            "含 .. 的目标必须被拒绝"
+        );
+        // 等价但已规范化的目标仍然放行
+        assert!(path_in_allowlist(&base.join("ok.txt"), &list));
     }
 
     #[test]

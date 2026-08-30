@@ -104,6 +104,9 @@ await client.storageDelete("key");         // boolean
 await client.fsRead("~/.dsh/settings.json");   // { content }
 await client.fsWrite("~/.dsh/x.txt", "hi");    // { ok }
 
+// 安全语义：路径含 `..` 父目录组件时一律拒绝（无论是否落在白名单内），
+// 请直接表达最终路径；设置 → 高级 的 fs 白名单决定可访问范围。
+
 /* exec（允许列表内） */
 await client.exec("git", ["status"]);      // { code, stdout, stderr }
 

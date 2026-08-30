@@ -7,6 +7,11 @@
 ## [Unreleased]
 
 ### Fixed
+- **【安全】fs 白名单 raw 前缀分支可被 `..` 绕过**：`fs.write` 的目标
+  尚不存在时走 raw 前缀匹配分支，`base/../evil.txt` 以组件前缀放行，
+  而 `std::fs::write` 按真实路径解析后越界写入；`path_in_allowlist`
+  现在在入口处拒绝含 `..` 父目录组件的目标（已存在路径的 canonicalize
+  分支本就解析真实路径，不受影响），PLUGIN_API 补充 fs 安全语义说明
 - **【安全】zip-slip 防御被绕过**：`extract_zip` 仅用 `Path::starts_with`
   检查条目路径，但该比较按组件进行、不解析 `..`，`dest.join("../x")`
   可通过检查并把文件写到目标目录之外（影响市场插件 zipball 安装与
