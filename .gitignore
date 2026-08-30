@@ -1,0 +1,24 @@
+# Node / 构建产物
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Rust
+src-tauri/target/
+src-tauri/gen/
+
+# 运行时数据
+runtime/
+dependencies/
+*.log
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.*

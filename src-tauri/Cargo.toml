@@ -1,0 +1,59 @@
+[package]
+name = "dsh-tauri-desktop"
+version = "0.1.0"
+description = "DeepSeek Harness (dsh) 的 Tauri 2 原生桌面壳"
+authors = ["dsh-tauri-desktop contributors"]
+license = "MIT"
+repository = "https://github.com/dsh-tauri-desk/dsh-tauri-desktop"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "dsh_tauri_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-window-state = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "macros",
+  "process",
+  "time",
+  "sync",
+  "io-util",
+  "fs",
+  "net",
+] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "json",
+  "stream",
+] }
+futures-util = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tar = "0.4"
+flate2 = "1"
+dirs = "6"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+mockall = "0.13"
+tempfile = "3"
+
+[features]
+# tauri.conf.json 中默认配置的隐藏产物：CI 中用于测试构建
+custom-protocol = ["tauri/custom-protocol"]
