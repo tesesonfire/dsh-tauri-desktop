@@ -614,6 +614,7 @@ pub fn classify_line(line: &str, default_level: &str) -> String {
 
 /// 应用启动钩子：已完成引导且开启自启动时自动拉起 dsh。
 pub fn startup_hooks(app: tauri::AppHandle) {
+    let app_for_core = app.clone();
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
         let settings = crate::models::settings::AppSettings::load(&path::settings_file());
@@ -631,6 +632,38 @@ pub fn startup_hooks(app: tauri::AppHandle) {
             }
         }
     });
+    // 核心过期提醒：每次启动对比本地 CURRENT 与远端最新发行版（GitHub 不可达时静默保留本地）
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        check_core_outdated(&app_for_core).await;
+    });
+}
+
+/// dsh 核心过期提醒事件（负载：{current, latest}）。
+pub const CORE_OUTDATED_EVENT: &str = "core://outdated";
+
+/// 对比本地当前核心与远端最新发行版，过期时发事件提醒。
+/// GitHub 不可达 / 无本地安装时静默跳过（保留本地，不打扰）。
+pub async fn check_core_outdated(app: &tauri::AppHandle) {
+    let Some(current) = core_service::current_version() else {
+        return;
+    };
+    let latest = core_service::list_remote_versions()
+        .await
+        .ok()
+        .and_then(|versions| versions.first().map(|v| v.version.clone()));
+    let Some(latest) = latest else {
+        return;
+    };
+    if crate::services::update_service::compare_versions(&latest, &current)
+        == std::cmp::Ordering::Greater
+    {
+        tracing::info!("dsh 核心有新版本: {current} -> {latest}");
+        let _ = app.emit(
+            CORE_OUTDATED_EVENT,
+            serde_json::json!({ "current": current, "latest": latest }),
+        );
+    }
 }
 
 /// 应用退出钩子：终止仍在运行的 dsh 子进程。

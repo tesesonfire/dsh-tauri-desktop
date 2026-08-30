@@ -16,7 +16,14 @@ import type {
   LogLine,
   Profile,
 } from "@/types/dsh";
-import type { PluginInfo, PluginManifest, PresetsFile } from "@/types/plugin";
+import type {
+  PluginInfo,
+  PluginManifest,
+  PresetsFile,
+  MarketPlugin,
+  MarketRegistry,
+  MarketRepo,
+} from "@/types/plugin";
 import type { StartOptions } from "@/types/dsh";
 
 /**
@@ -128,6 +135,20 @@ export const pluginBridgeCall = (
     params: params ?? null,
   });
 
+/* ---------- 插件市场 ---------- */
+
+export const marketOfficial = (): Promise<MarketRegistry> =>
+  call<MarketRegistry>("market_official");
+export const marketSearch = (query: string): Promise<MarketRepo[]> =>
+  call<MarketRepo[]>("market_search", { query });
+export const marketInstall = (
+  repo: string,
+  subpath?: string,
+): Promise<PluginInfo> =>
+  call<PluginInfo>("market_install", { repo, subpath: subpath ?? null });
+export const marketUpgrades = (): Promise<MarketPlugin[]> =>
+  call<MarketPlugin[]>("market_upgrades");
+
 /* ---------- 下载 ---------- */
 
 export const downloadFile = (
@@ -180,3 +201,14 @@ export const onUpdateProgress = async (
   callback: (progress: UpdateProgress) => void,
 ): Promise<UnlistenFn> =>
   listen<UpdateProgress>("update://progress", (event) => callback(event.payload));
+
+export interface CoreOutdatedPayload {
+  current: string;
+  latest: string;
+}
+
+/** dsh 核心过期提醒（启动时对比远端最新发行版，GitHub 不可达则不触发）。 */
+export const onCoreOutdated = async (
+  callback: (payload: CoreOutdatedPayload) => void,
+): Promise<UnlistenFn> =>
+  listen<CoreOutdatedPayload>("core://outdated", (event) => callback(event.payload));

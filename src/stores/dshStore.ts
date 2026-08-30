@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import type { DshConnectState, DshStatus, LogLine } from "@/types/dsh";
-import { dshRestart, dshStart, dshStop, dshStatus, onDshLog, onDshState } from "@/services/tauriService";
+import {
+  dshRestart,
+  dshStart,
+  dshStop,
+  dshStatus,
+  onCoreOutdated,
+  onDshLog,
+  onDshState,
+  type CoreOutdatedPayload,
+} from "@/services/tauriService";
 import type { StartOptions } from "@/types/dsh";
 
 /** 日志环形缓冲上限 */
@@ -12,6 +21,8 @@ interface DshState {
   connect: DshConnectState;
   loading: boolean;
   error: string | null;
+  /** dsh 核心过期提醒（启动时后端对比远端最新版；null 表示无提醒） */
+  coreOutdated: CoreOutdatedPayload | null;
   refresh: () => Promise<void>;
   start: (options?: StartOptions) => Promise<void>;
   stop: () => Promise<void>;
@@ -29,6 +40,7 @@ export const useDshStore = create<DshState>((set, get) => ({
   connect: "loading",
   loading: false,
   error: null,
+  coreOutdated: null,
 
   refresh: async () => {
     try {
@@ -108,6 +120,8 @@ export const useDshStore = create<DshState>((set, get) => ({
         }
       }),
     );
+    // 核心过期提醒（GitHub 不可达时后端静默，不触发）
+    unlisteners.push(await onCoreOutdated((payload) => set({ coreOutdated: payload })));
     return () => unlisteners.forEach((fn) => fn());
   },
 }));

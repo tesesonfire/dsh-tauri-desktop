@@ -1,0 +1,86 @@
+{
+  "updatedAt": "2026-08-29",
+  "source": "dsh-tauri-desk/dsh-tauri-packages README",
+  "plugins": [
+    {
+      "id": "dsh-tauri",
+      "name": "DSH Tauri",
+      "version": "0.2.0",
+      "description": "核心插件：Tauri 宿主导航栏与 DSH iframe 之间的消息桥（theme.changed / dsh.state / panel.message 事件）。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri",
+      "official": true,
+      "tags": ["核心", "消息桥"]
+    },
+    {
+      "id": "dsh-tauri-ui",
+      "name": "DSH Tauri UI",
+      "version": "0.1.0",
+      "description": "Tauri 风格 UI 扩展：包含设置侧边栏入口，统一主题变量注入。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-ui",
+      "official": true,
+      "tags": ["UI", "设置"]
+    },
+    {
+      "id": "dsh-tauri-worktree",
+      "name": "DSH Tauri Worktree",
+      "version": "0.1.3",
+      "description": "Git worktree 管理：按会话隔离工作区（创建/列表/切换，checkout 需用户批准）。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-worktree",
+      "official": true,
+      "tags": ["Git", "会话"]
+    },
+    {
+      "id": "dsh-tauri-session",
+      "name": "DSH Tauri Session",
+      "version": "0.4.9",
+      "description": "会话归档：提供归档设置页，管理本地会话存档与项目列表。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-session",
+      "official": true,
+      "tags": ["会话", "归档"]
+    },
+    {
+      "id": "dsh-tauri-panel",
+      "name": "DSH Tauri Panel",
+      "version": "0.0.0",
+      "description": "面板宿主：面板 UI 与 panel.protocol 的宿主半边，是 Better Sidebar 生态的基座。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-panel",
+      "official": true,
+      "tags": ["面板", "基座"]
+    },
+    {
+      "id": "dsh-tauri-panel-extension",
+      "name": "DSH Tauri Panel Extension",
+      "version": "0.0.0",
+      "description": "扩展面板：GitHub 仓库引用（owner/repo）转面板内容，支持第三方扩展注入。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-panel-extension",
+      "official": true,
+      "tags": ["面板", "扩展"]
+    },
+    {
+      "id": "dsh-tauri-panel-placeholder",
+      "name": "DSH Tauri Panel Placeholder",
+      "version": "0.0.0",
+      "description": "占位面板：演示面板集成入口与 slot/locale/服务注入约定的最小示例。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-panel-placeholder",
+      "official": true,
+      "tags": ["面板", "示例"]
+    },
+    {
+      "id": "dsh-tauri-rightclick",
+      "name": "DSH Tauri RightClick",
+      "version": "0.4.9",
+      "description": "右键菜单：按目标作用域（文件/会话/终端）注入上下文菜单项。",
+      "repo": "dsh-tauri-desk/dsh-tauri-plugins",
+      "path": "packages/dsh-tauri-rightclick",
+      "official": true,
+      "tags": ["右键菜单", "交互"]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "com.dsh-tauri.notification",
+  "name": "dsh-tauri-notification",
+  "version": "0.1.0",
+  "description": "状态通知插件：dsh 启动/就绪/崩溃/停止时发送桌面通知，支持测试通知与按事件开关",
+  "author": "dsh-tauri-desktop contributors",
+  "entry": "index.html",
+  "permissions": ["ui", "notification", "storage"],
+  "contributes": {
+    "sidebar": [
+      { "id": "notifications", "title": "通知", "icon": "bell" }
+    ],
+    "setting": [
+      { "key": "notifyOnReady", "type": "boolean", "default": true },
+      { "key": "notifyOnCrash", "type": "boolean", "default": true },
+      { "key": "notifyOnStop", "type": "boolean", "default": false }
+    ]
+  }
+}

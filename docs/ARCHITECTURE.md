@@ -77,6 +77,7 @@ sequenceDiagram
 | plugin_service | Rust | 插件发现/安装/卸载/启用、存储隔离 | `plugin_list/install/uninstall/enable` |
 | plugin runtime | Rust+前端 | manifest 校验、iframe 宿主、postMessage 桥 | `plugin_asset`, bridge protocol |
 | download_service | Rust | 断点续传下载、zip/tar.gz 解压、进度事件 | `download_file/cancel` |
+| market_service | Rust | 官方注册表（远程+内置回退）、GitHub 搜索、zipball 安装/升级 | `market_official/search/install/upgrades` |
 | update_service | Rust | GitHub Releases 检查/下载/SHA256 校验/应用 | `update_check/download_and_apply` |
 | cli_service | Rust | PATH shim 注册（跨平台） | `cli_install_shim/cli_status` |
 | notification | Rust | 跨平台系统通知 | `notify` |
@@ -103,6 +104,10 @@ sequenceDiagram
 | `plugin_asset` | `{id,path}` | `Asset{mime,content?}` | – |
 | `download_file` | `{url,dest?}` | `{id}` | `download://progress` |
 | `download_cancel` | `{id}` | `()` | – |
+| `market_official` | – | `MarketRegistry` | – |
+| `market_search` | `{query}` | `Vec<MarketRepo>` | – |
+| `market_install` | `{repo,subpath?}` | `PluginInfo` | `download://progress` |
+| `market_upgrades` | – | `Vec<MarketPlugin>` | – |
 | `cli_install_shim` / `cli_status` | – | `CliStatus` | – |
 | `update_check` | – | `UpdateInfo?` | – |
 | `update_download_and_apply` | – | `()` | `update://progress` |

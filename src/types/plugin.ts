@@ -72,12 +72,41 @@ export interface PresetPlugin {
   source: string;
   recommended: boolean;
   permissions: PluginPermission[];
+  /** 预设对应的内置/市场插件 id（null 表示由市场页直接提供或暂无实现）。 */
+  pluginId: string | null;
 }
 
 export interface PresetsFile {
   version: number;
   updatedAt: string;
   presets: PresetPlugin[];
+}
+
+/** ---------- 插件市场 ---------- */
+
+/** 官方市场注册表条目（对应 dsh-tauri-plugins 仓库 packages/<id>）。 */
+export interface MarketPlugin {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  repo: string;
+  path: string;
+  official: boolean;
+  tags: string[];
+}
+
+export interface MarketRegistry {
+  updatedAt: string;
+  plugins: MarketPlugin[];
+}
+
+/** GitHub 仓库搜索结果。 */
+export interface MarketRepo {
+  fullName: string;
+  description: string | null;
+  stars: number;
+  url: string;
 }
 
 /** ---------- postMessage 桥接协议（见 docs/ARCHITECTURE.md §6） ---------- */

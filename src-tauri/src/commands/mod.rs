@@ -2,6 +2,7 @@ pub mod app;
 pub mod cli;
 pub mod core;
 pub mod download;
+pub mod market;
 pub mod notification;
 pub mod plugin;
 pub mod profile;

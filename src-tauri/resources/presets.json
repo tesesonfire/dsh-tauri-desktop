@@ -5,42 +5,46 @@
     {
       "id": "dsh-market",
       "name": "DSH Market",
-      "description": "社区插件市场：浏览、搜索、一键安装 dsh 插件。",
+      "description": "社区插件市场：浏览、搜索、一键安装 dsh 插件（由应用内置市场页直接提供）。",
       "icon": "store",
       "category": "market",
       "source": "builtin",
       "recommended": true,
-      "permissions": ["ui", "network", "storage"]
+      "permissions": ["ui", "network", "storage"],
+      "pluginId": null
     },
     {
       "id": "dsh-better-sidebar",
       "name": "DSH Better Sidebar",
-      "description": "类 VSCode 右侧栏，按会话隔离的面板布局。",
+      "description": "类 VSCode 右侧栏：插件注册的面板在主窗口右侧聚合展示。",
       "icon": "panel",
       "category": "ui",
       "source": "builtin",
       "recommended": true,
-      "permissions": ["ui", "storage"]
+      "permissions": ["ui", "storage"],
+      "pluginId": "com.dsh-tauri.panel"
     },
     {
       "id": "dsh-notification",
       "name": "DSH Notification",
-      "description": "回合完成时发送桌面通知，专注其他工作不错过结果。",
+      "description": "dsh 状态变化桌面通知：就绪 / 崩溃 / 停止事件可独立开关。",
       "icon": "bell",
       "category": "productivity",
       "source": "builtin",
       "recommended": true,
-      "permissions": ["ui", "notification"]
+      "permissions": ["ui", "notification"],
+      "pluginId": "com.dsh-tauri.notification"
     },
     {
       "id": "dsh-win-terminal-inspector",
       "name": "DSH Win Terminal Inspector",
-      "description": "Windows 极简模式修复与终端检查工具。",
+      "description": "Windows 极简模式修复与终端检查工具（规划中，暂未提供实现）。",
       "icon": "terminal",
       "category": "developer",
       "source": "builtin",
       "recommended": false,
-      "permissions": ["ui", "exec", "storage"]
+      "permissions": ["ui", "exec", "storage"],
+      "pluginId": null
     }
   ]
 }

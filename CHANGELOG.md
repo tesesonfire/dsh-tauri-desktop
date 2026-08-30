@@ -7,6 +7,25 @@
 ## [Unreleased]
 
 ### Added
+- **插件市场正式版**：官方插件注册表（对齐 dsh-tauri-desk/dsh-tauri-plugins，
+  远程 marketplace.json 优先、离线回退编译期内置快照）、GitHub 社区插件搜索
+  （Search API，按 star 排序）、仓库 zipball 一键安装（下载 → 解压 → 自动定位
+  manifest.json → 校验 → 安装到用户插件目录）、已装插件版本对比与一键升级
+  （升级保留插件 KV 存储）；新增 `market_official` / `market_search` /
+  `market_install` / `market_upgrades` 四个命令
+- 市场页三个标签页（官方插件 / 预设 / 社区搜索），官方条目展示版本、标签、
+  已装版本与可升级徽标，「源码」按钮经原生子窗口打开 GitHub
+- **第 8 个内置插件 dsh-tauri-notification**：dsh 状态变化桌面通知
+  （就绪 / 崩溃 / 失败 / 停止三类可独立开关、测试通知、事件日志），
+  预设「DSH Notification」映射到该插件
+- **右侧插件面板坞**（Better Sidebar 形态）：插件注册的 panel 聚合在主窗口
+  右栏，按标签切换，复用 PluginHost 沙箱
+- **dsh 核心过期提醒**：每次启动对比本地 CURRENT 与远端最新发行版，
+  过期时顶部横幅提示（`core://outdated` 事件；GitHub 不可达时静默保留本地，
+  与参考实现对齐）
+- **CLI 全局安装的 dsh 优先使用**：本地无托管核心时自动探测
+  `npm i -g @deepseek-ai/dsh`（纯文件系统探测常见 npm 全局根，可用
+  `DSH_GLOBAL_NODE_MODULES` 覆盖），对齐参考实现「本地 CLI 核心优先」
 - 主界面 ActivityBar 直达插件市场 / 档案管理 / 设置页（同布局内切换）
 - 「dsh 核心版本」管理面板：远端版本安装（GitHub Releases）、本地多版本切换/删除
 - dsh WebUI 未启动面板显示环境自检徽章（Node / dsh 安装状态）
@@ -14,8 +33,10 @@
 - `asset_matches_platform` 纯函数与 `tauri.invoke` 白名单单元测试
 
 ### Changed
+- `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
+- 预设卡片按 `pluginId` 映射到真实插件（此前误用预设 id 匹配 manifest.id）
 - `http_client` 应用设置中的 HTTP 代理（`advanced.proxy`，重启生效）
-- 预设插件安装接线：对应内置插件直接启用；无下载源时进入待安装列表
+- 内部下载流程改用同步等待式 `download_file_direct`（进度事件保留）
 - DshFrame 断连态显示错误覆盖层（此前误渲染 iframe）
 
 ## [0.1.0] - 2026-08-31

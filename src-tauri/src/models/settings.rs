@@ -140,9 +140,14 @@ mod tests {
     fn settings_save_and_load() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let file = tmp.path().join("settings.json");
-        let mut s = AppSettings::default();
-        s.onboarded = true;
-        s.dsh.port = 4000;
+        let s = AppSettings {
+            onboarded: true,
+            dsh: DshConfig {
+                port: 4000,
+                ..DshConfig::default()
+            },
+            ..AppSettings::default()
+        };
         s.save(&file).expect("save");
         let loaded = AppSettings::load(&file);
         assert!(loaded.onboarded);

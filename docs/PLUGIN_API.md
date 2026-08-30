@@ -188,3 +188,26 @@ document.body.innerHTML = `<h1>Hello! 打开次数：${count}</h1>`;
 | dsh-tauri-panel-extension | `plugins/dsh-tauri-panel-extension` | `src/extensions.ts` Skills/MCP 注册表 |
 | dsh-tauri-session | `plugins/dsh-tauri-session` | `src/archive.ts` 归档查询/分组 |
 | dsh-tauri-rightclick | `plugins/dsh-tauri-rightclick` | `src/menus.ts` 菜单注册表/作用域映射 |
+| dsh-tauri-notification | `plugins/dsh-tauri-notification` | `src/notification.ts` 状态迁移规则/开关归一化 |
+
+## 7. 插件市场
+
+市场功能对齐官方生态（数据源与安装模型参照
+[dsh-tauri-desk/dsh-tauri-plugins](https://github.com/dsh-tauri-desk/dsh-tauri-plugins)
+与参考实现 deepseek-harness-desktop）：
+
+- **官方注册表**：`market_official` 返回 `MarketRegistry`。加载顺序为
+  环境变量 `DSH_MARKET_REGISTRY_URL` → 默认远程
+  `raw.githubusercontent.com/dsh-tauri-desk/dsh-tauri-plugins/main/marketplace.json`
+  → 编译期内置快照 `src-tauri/resources/marketplace.json`（离线可用）。
+- **社区搜索**：`market_search {query}` 走 GitHub Search API（`dsh` 关键词增强、
+  按 star 排序、前 10 条）。
+- **安装 / 升级**：`market_install {repo, subpath?}` 下载仓库默认分支 zipball
+  （`api.github.com/repos/<owner>/<repo>/zipball`，自动跟随 main/master）→
+  解压（zip-slip 防御）→ 定位含 `manifest.json` 的插件目录（显式 subpath 优先，
+  否则浅层扫描取最浅命中，跳过 `.git/node_modules/dist/target`）→
+  manifest 校验 → 覆盖安装到 `~/.dsh/plugins/<id>`（升级即重装，KV 存储保留）。
+- **升级检测**：`market_upgrades` 以 semver 对比本地已装版本与注册表版本，
+  市场页在官方条目上直接给出「升级到 vX.Y.Z」入口。
+- **安全边界**：与手动安装一致 —— 仅复制静态资源，桥接调用仍按 manifest
+  权限白名单放行；仓库标识非法（路径穿越 / 多斜杠）直接拒绝。

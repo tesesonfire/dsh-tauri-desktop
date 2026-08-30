@@ -238,7 +238,7 @@ pub async fn install_version(
 }
 
 /// 目录只有一个子目录时返回它（发行包常见布局）。
-fn single_root_dir(dir: &Path) -> Option<PathBuf> {
+pub(crate) fn single_root_dir(dir: &Path) -> Option<PathBuf> {
     let entries: Vec<_> = std::fs::read_dir(dir).ok()?.collect::<Result<Vec<_>, _>>().ok()?;
     if entries.len() == 1 && entries.first()?.path().is_dir() {
         Some(entries.first()?.path())
@@ -294,8 +294,8 @@ pub fn resolve_entry(version_dir: &Path) -> Option<PathBuf> {
 }
 
 /// 解析实际启动用的 dsh 入口：
-/// 1) 已安装的当前核心版本；
-/// 2) 全局 npm 安装的 @deepseek-ai/dsh（PATH 中的 dsh 命令）；
+/// 1) 已安装的当前核心版本（用户在多版本管理中显式选定的版本优先）；
+/// 2) CLI 全局安装的 @deepseek-ai/dsh（`npm i -g`，对齐参考实现的「本地 CLI 核心优先」）；
 /// 3) 无 -> Err。
 pub fn resolve_active_entry() -> AppResult<PathBuf> {
     if let Some(version) = current_version() {
@@ -304,10 +304,41 @@ pub fn resolve_active_entry() -> AppResult<PathBuf> {
             return Ok(entry);
         }
     }
-    // 依赖全局 PATH 中已有 dsh（用户自行 npm i -g 的场景由 env_check 报告）
+    if let Some(entry) = global_dsh_entry() {
+        return Ok(entry);
+    }
     Err(AppError::NotFound(
         "未找到已安装的 dsh 核心，请先在「dsh 配置」中安装".into(),
     ))
+}
+
+/// 检测 CLI 全局安装的 dsh（`npm i -g @deepseek-ai/dsh`）。
+///
+/// 纯文件系统探测常见 npm 全局根目录，不产生子进程：
+/// - 环境变量 `DSH_GLOBAL_NODE_MODULES`（测试/自定义布局覆盖）
+/// - Windows: `%APPDATA%\\npm\\node_modules`
+/// - 类 Unix: `~/.npm-global/lib/node_modules`、`/usr/local/lib/node_modules`、`/usr/lib/node_modules`
+pub fn global_dsh_entry() -> Option<PathBuf> {
+    let mut roots: Vec<PathBuf> = Vec::new();
+    if let Ok(from_env) = std::env::var("DSH_GLOBAL_NODE_MODULES") {
+        if !from_env.trim().is_empty() {
+            roots.push(PathBuf::from(from_env));
+        }
+    }
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        roots.push(PathBuf::from(appdata).join("npm").join("node_modules"));
+    }
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        let home = PathBuf::from(home);
+        roots.push(home.join(".npm-global").join("lib").join("node_modules"));
+    }
+    roots.push(PathBuf::from("/usr/local/lib/node_modules"));
+    roots.push(PathBuf::from("/usr/lib/node_modules"));
+    roots
+        .into_iter()
+        .map(|root| root.join("@deepseek-ai").join("dsh"))
+        .find(|pkg| pkg.is_dir())
+        .and_then(|pkg| resolve_entry(&pkg))
 }
 
 #[cfg(test)]
@@ -315,14 +346,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn current_version_missing_file_is_none() {
-        // 在未初始化的临时 DSH_HOME 下应返回 None（不 panic）
+    fn single_root_dir_picks_only_child() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let file = tmp.path().join("CURRENT");
-        assert_eq!(
-            std::fs::read_to_string(&file).ok().map(|s| s.trim().to_string()),
-            None
-        );
+        let child = tmp.path().join("pkg-1.0.0");
+        std::fs::create_dir_all(&child).expect("mkdir");
+        assert!(single_root_dir(tmp.path()).is_some());
+        std::fs::write(tmp.path().join("loose.txt"), b"x").expect("write");
+        assert!(single_root_dir(tmp.path()).is_none());
+    }
+
+    #[test]
+    fn global_dsh_entry_detects_via_env_root() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let pkg = tmp.path().join("@deepseek-ai").join("dsh");
+        let lib = pkg.join("lib");
+        std::fs::create_dir_all(&lib).expect("mkdir");
+        std::fs::write(pkg.join("package.json"), r#"{ "name": "dsh", "bin": { "dsh": "./lib/cli.js" } }"#)
+            .expect("write");
+        std::fs::write(lib.join("cli.js"), "// cli").expect("write");
+        // SAFETY: 测试进程内一次性设置探测根（其他测试不依赖该变量）
+        std::env::set_var("DSH_GLOBAL_NODE_MODULES", tmp.path());
+        let found = global_dsh_entry();
+        std::env::remove_var("DSH_GLOBAL_NODE_MODULES");
+        assert!(found.is_some_and(|p| p.ends_with("cli.js")), "应探测到全局 dsh 入口");
     }
 
     #[test]

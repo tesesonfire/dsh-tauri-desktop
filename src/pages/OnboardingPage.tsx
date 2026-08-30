@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/Switch";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Icon, type IconName } from "@/components/Icon";
-import { presetsGet, profileCreate, settingsGet, settingsSave, dshEnvCheck } from "@/services/tauriService";
+import { presetsGet, profileCreate, settingsGet, settingsSave, dshEnvCheck, cliInstallShim } from "@/services/tauriService";
 import { toast } from "@/stores/toastStore";
 import { useOnMount } from "@/hooks/useTauriCommand";
 import type { AppSettings } from "@/types/tauri";
@@ -27,6 +27,7 @@ export default function OnboardingPage(props: { onDone: () => void }): React.Rea
   const [profileName, setProfileName] = useState<string>("default");
   const [port, setPort] = useState<string>("3080");
   const [finishing, setFinishing] = useState<boolean>(false);
+  const [cliDone, setCliDone] = useState<boolean>(false);
 
   useOnMount(() => {
     void presetsGet()
@@ -203,6 +204,24 @@ export default function OnboardingPage(props: { onDone: () => void }): React.Rea
               <p className="text-xs text-muted-foreground">
                 DSH_HOME 默认位于 ~/.dsh，Node 运行时与 dsh 核心将在首次启动时按需安装。
               </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cliDone}
+                  onClick={() => {
+                    void cliInstallShim()
+                      .then(() => {
+                        setCliDone(true);
+                        toast.success("dsh 命令已注册，新开终端即可使用");
+                      })
+                      .catch((err: unknown) => toast.error(String(err)));
+                  }}
+                >
+                  {cliDone ? "已注册 dsh 命令" : "注册 dsh 命令行工具（可选）"}
+                </Button>
+                <span className="text-xs text-muted-foreground">向 PATH 写入 dsh shim，可随时在设置中撤销</span>
+              </div>
             </CardContent>
           </Card>
         )}

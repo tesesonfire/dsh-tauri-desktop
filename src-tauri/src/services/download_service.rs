@@ -218,6 +218,17 @@ fn make_progress(
     }
 }
 
+/// 同步等待式下载（不走任务注册表）：供核心/插件安装等内部流程复用，
+/// 进度仍经 `download://progress` 事件推送（id 为 `inline-<millis>`）。
+pub async fn download_file_direct(
+    app: &tauri::AppHandle,
+    url: String,
+    dest: PathBuf,
+) -> AppResult<()> {
+    let id = format!("inline-{}", chrono::Utc::now().timestamp_millis());
+    run_download(app, &id, url, dest, Arc::new(AtomicBool::new(false))).await
+}
+
 /// 供命令层调用：删除任务注册（下载完成/失败后）。
 pub fn cleanup_task(manager: &DownloadManager, task: &DownloadTask) {
     manager.remove(&task.id);

@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn dangerous_args_rejected() {
-        assert!(dangerous_argument(&["-rf".into(), "/".into()]) == false);
+        assert!(!dangerous_argument(&["-rf".into(), "/".into()]));
         assert!(dangerous_argument(&["rm".into(), "-rf".into(), "/".into()]));
         assert!(dangerous_argument(&["shutdown".into(), "/s".into()]));
         assert!(!dangerous_argument(&["status".into()]));
