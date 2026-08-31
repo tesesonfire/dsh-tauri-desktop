@@ -12,6 +12,7 @@ src-tauri/gen/
 runtime/
 dependencies/
 *.log
+.dsh/
 
 # IDE
 .vscode/

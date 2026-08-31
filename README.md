@@ -1,9 +1,11 @@
 # dsh-tauri-desktop
 
-[![CI](https://github.com/dsh-tauri-desk/dsh-tauri-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/dsh-tauri-desk/dsh-tauri-desktop/actions/workflows/ci.yml)
-[![Release](https://github.com/dsh-tauri-desk/dsh-tauri-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/dsh-tauri-desk/dsh-tauri-desktop/actions/workflows/release.yml)
+[![CI](https://github.com/tesesonfire/dsh-tauri-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/tesesonfire/dsh-tauri-desktop/actions/workflows/ci.yml)
+[![Release](https://github.com/tesesonfire/dsh-tauri-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/tesesonfire/dsh-tauri-desktop/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8D8)](https://v2.tauri.app/)
+
+> 语言 / Language：**中文** | [English](README.en.md)
 
 **dsh（DeepSeek Harness）的 Tauri 2 原生桌面壳。** 安装包 < 10MB、零环境依赖（无需预装 Node.js / Docker），下载即用。
 
@@ -21,7 +23,7 @@
 
 ### 安装
 
-从 [Releases](https://github.com/dsh-tauri-desk/dsh-tauri-desktop/releases) 下载对应平台安装包：
+从 [Releases](https://github.com/tesesonfire/dsh-tauri-desktop/releases) 下载对应平台安装包：
 
 | 平台 | 格式 | 要求 |
 |---|---|---|
@@ -96,6 +98,20 @@ cd src-tauri && cargo clippy # Rust lint
 
 CI（`.github/workflows/ci.yml`）在三个平台运行 lint + 类型检查 + 全部测试；
 Release 工作流在 tag 推送时构建 NSIS / DMG (Universal) / AppImage + deb 并发布。
+
+## ⚠️ 已知问题（发布说明）
+
+本应用为开源项目，安装包**未经代码签名/公证**，各平台首次运行时可能遇到系统安全拦截：
+
+- **Windows SmartScreen**：运行 NSIS 安装包时会弹出「已保护你的电脑」提示 ——
+  点击「更多信息」→「仍要运行」即可。这是未签名应用的预期行为，非病毒。
+- **macOS Gatekeeper**：打开 DMG 时提示「已损坏」或「无法验证开发者」——
+  执行 `sudo xattr -rd com.apple.quarantine /Applications/dsh-tauri-desktop.app`。
+- **Linux AppImage**：需安装 FUSE（`sudo apt-get install libfuse2`）；
+  deb 包需 WebKitGTK 4.1（`sudo apt-get install libwebkit2gtk-4.1-0`）。
+
+如遇其他问题（dsh 启动失败、插件加载失败、Wayland 黑屏等），见
+[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)。
 
 ## 🤝 贡献
 
