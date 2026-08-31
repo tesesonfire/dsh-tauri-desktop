@@ -16,7 +16,7 @@ pub const UPDATE_EVENT: &str = "update://progress";
 /// 更新仓库（可用环境变量 DSH_UPDATE_REPO 覆盖，便于私有部署）。
 fn update_repo() -> String {
     std::env::var("DSH_UPDATE_REPO")
-        .unwrap_or_else(|_| "dsh-tauri-desk/dsh-tauri-desktop".to_string())
+        .unwrap_or_else(|_| "tesesonfire/dsh-tauri-desktop".to_string())
 }
 
 /// 当前平台标识（与 update-metadata.yml 生成的 latest.json 平台键对应）。

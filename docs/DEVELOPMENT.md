@@ -21,7 +21,7 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev 
 ## 快速开始
 
 ```bash
-git clone https://github.com/dsh-tauri-desk/dsh-tauri-desktop
+git clone https://github.com/tesesonfire/dsh-tauri-desktop
 cd dsh-tauri-desktop
 pnpm install
 pnpm plugins:build     # 构建内置插件（esbuild 打包到 plugins/*/dist）
