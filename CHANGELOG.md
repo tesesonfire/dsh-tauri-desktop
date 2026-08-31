@@ -24,104 +24,9 @@
   续传决策提取为 `resume_plan` / `total_size` 纯函数并用 4 项边界测试钉住
 
 ### Added
-- **Markdown 消毒测试（4 项）**：内联 `<script>` 剥离、事件处理器与
-  `javascript:` 链接过滤（正常 https 链接保留）、iframe/object 嵌入剥离
-  —— 插件 README 与更新日志均为远端内容，注入面由此钉死
-- **归档解压安全/往返测试（+2）**：真实构造 zip 的 `../` 逃逸条目跳过、
-  tar.gz 嵌套目录完整还原
-- **自定义协议 URI 解析提取为纯函数**：`parse_plugin_uri`（Windows 的
-  `http://dshplugin.localhost/` 形态与 macOS/Linux 的 `dshplugin://` 形态
-  归一化、缺省 `index.html`、无关 URI 返回空 id）+ `mime_type` 静态资源
-  映射测试（+5，插件资源服务的安全解析路径首次有直接覆盖）
-- **detectPlatform 平台分支测试（+3）**：macos/windows/linux UA 识别、
-  未知平台回退、windowStore 平台记录
-- **UpdatePanel 失败降级与重启就绪测试（+2）**：检查更新网络失败时错误
-  Toast 且面板可重试、下载应用后进入「立即重启」状态
-- **心跳与桥接守卫测试（+6）**：`pingDsh` 成功/拒绝/超时中止三态
-  （mock fetch，覆盖 no-cors 参数）、`isBridgeRequest` 对 8 种畸形
-  载荷的拒绝、`newBridgeId` 唯一性
-- **workflow_service 环境检查文案提取**：`env_message(node_ok, dsh_installed)`
-  纯函数（Node 缺失优先于 dsh 缺失提示）+ 测试
-- **Toaster 全局渲染器测试（3 项）**：四类 Toast 的样式分支、点击关闭
-  与 store 同步、空态渲染
-- **lifecycle 集成测试再扩展 dsh 核心多版本管理**：CURRENT 指针切换
-  （容忍 v 前缀）、未安装版本拒绝、`installed_versions` 的 is_current
-  与 entry 解析、当前版本删除拒绝、非当前版本删除目录清理、重复删除
-  NotFound
-- **e2e 场景 3 前端联动测试（3 项，`scenario3Linkage.test.tsx`）**：
-  运行/停止/崩溃+重启计数三种状态下，状态徽章、启动/停止按钮组与
-  日志面板（含 error 级别过滤）随同一 store 同步联动
-- **Permission 权限映射全量测试（+2）**：7 类权限 → 桥接方法组逐一钉住
-  （notification 复用 `ui` 组）、未知权限在 `FromStr` 与 JSON 反序列化
-  两个层面均被拒绝
-- **ARCHITECTURE.md 新增「3.1 后端事件一览」**：5 个后端事件的负载与
-  触发时机（含 `core://outdated`）
-- **插件 SDK 能力增强**：`onAny`（订阅全部宿主事件，日志/调试插件用）、
-  `httpJson`（`httpRequest` 的 JSON 解析封装，非 2xx reject）；
-  SDK 测试增至 10 项，PLUGIN_API 文档同步
-- **tauriService 错误包装测试（4 项）**：字符串/对象 rejection 统一包装为
-  `[command] message` 上下文 Error（cause 保留）、参数透传与 null 可选
-  参数归一化
-- **PluginBridge（宿主半边）测试（8 项，此前覆盖率 0%）**：ping 应答、
-  sidebar/panel 注册的 pluginId 前缀语义、未知方法转发后端、后端拒绝时
-  ok:false 错误回传、非桥接消息过滤、事件广播与主题事件重播
-- **dshStore 动作与 dshService 纯函数测试（6 项）**：start/stop/restart
-  状态机与错误透出、subscribeEvents 的 dsh.state → connect 迁移、
-  指数退避序列、WebUI 地址构建、Tauri 环境探测
-- **CoreManagerPanel / PluginList / UpdatePanel 测试（8 项）**：已装/远端
-  版本展示与切换/删除/安装调用、插件列表启用开关与卸载、更新检查
-  「已最新」Toast 与更新日志渲染（经 toastStore 断言）
-- **ProfileManagerPage 测试（4 项）**：档案列表与「当前」徽标、
-  按名称+端口创建、导出调用参数与删除确认链路、导入路径输入与刷新
-- **lifecycle 集成测试扩展档案导入/导出**：真实文件导出、同名导入拒绝、
-  改名导入后隔离目录重建、删除清理隔离目录与二次删除 NotFound
-- **市场页详情视图测试（+2）**：README Markdown 渲染与返回市场、
-  README 缺失时的占位文案
-- **PluginHost 组件测试（5 项）**：iframe 协议 URL 与沙箱/桥标记、
-  禁用态与后端错误详情、加载失败覆盖层重试、多实例桥标记唯一性
-- **市场页社区搜索测试（+2）**：GitHub 搜索结果渲染（star/仓库名）、
-  zipball 安装调用参数、无结果空态提示
-- **loader.rs 白名单路径边界测试（+4）**：`~` 前缀展开、组件边界
-  （`base` 与 `base-evil` 不混淆）、未解析路径的原样前缀匹配语义、
-  Windows `\\?\` 扩展前缀剥离
-- **OnboardingPage 向导流程测试（5 项）**：欢迎页环境徽章、推荐预设
-  预选与切换、可选 CLI 注册按钮状态流转、完成步骤的档案创建/设置
-  持久化/onDone 回调、汇总页文案
-- **测试基建**：`tests/helpers/mockTauriService.ts` 共享 mock 工厂
-  （显式导出列表 + 事件订阅 no-op 取消函数 + 后端契约空值兜底），
-  mainPage/settingsPage/panels 三个测试文件重构复用
-- **compare_versions 边界加固与测试**：容忍首尾空白与 v 前缀；
-  用测试钉住已知局限（仅比较前 3 段、prerelease 截断判等）
-- **SettingsPage 测试（4 项）**：加载态/版本号渲染、通用页主题切换保存、
-  dsh 配置页端口修改持久化、高级页白名单内容展示
-- **profile_service 纯逻辑提取**：`ensure_not_duplicate`（id/name 双重
-  唯一性，create 与 import 共用）与 `retain_existing`（删除未命中显式
-  NotFound）+ 单元测试（+2）
-- **MainPage 集成测试（5 项）**：核心过期横幅显隐与版本文案、
-  右侧插件面板坞显隐/标签/禁用插件宿主剔除
-- **CliPanel / Sidebar 组件测试（6 项）**：CLI 注册状态流转、
-  dsh 启动/停止/重启按钮随状态切换、状态元数据与错误块、档案切换
-- **plugin_service 扫描测试（+3）**：合法/非法 manifest/非插件目录、
-  缺失根目录容错、多根扫描的 builtin 标记
-- **pluginStore / profileStore 状态单测补齐（12 项）**：桥接注册的
-  pluginId 前缀语义、反注册清理 activeSidebarId、panel 去重、
-  档案删除时活动档案回落、后端错误透出
-- **market_service 仓库校验提取**：`normalize_repo` 纯函数
-  （owner/repo 归一化、`.git` 剥离、路径穿越/多级/空白拒绝）+ serde
-  可选字段缺省测试（3 项）
-- **WebDriver e2e 场景骨架**（`src-tauri/tests/webdriver_e2e.rs`）：
-  reqwest 直连 WebDriver 协议的最小客户端（会话/标题/元素定位，零新增
-  依赖），场景 1「应用启动 → 主窗口就绪」；默认跳过，`DSH_E2E=1` +
-  `DSH_E2E_APP` 按需启用，tests/e2e/README.md 更新运行说明
-- **插件 SDK 事件能力增强**：`once`（一次性订阅）、`off`（显式反订阅）、
-  `waitForEvent(method, timeoutMs?)`（等待下一次事件，超时 reject）；
-  新增 `plugins/sdk/test/bridge-client.test.ts` 覆盖调用往返、错误/超时、
-  订阅语义（8 项）
-- **dsh 日志面板过滤**：级别过滤（all/error/warn/success）+ 关键字
-  大小写不敏感搜索，`filterLogLines` 纯函数 + 组件交互测试（8 项）
-- **插件生命周期服务层集成测试**（`src-tauri/tests/lifecycle.rs`，对齐
-  e2e 场景 4/5）：临时 `DSH_HOME` 下走真实服务栈 —— 设置持久化、
-  插件安装/禁用/启用/KV 存储隔离/卸载语义/非法 manifest 拒绝
+
+#### 功能
+
 - **插件市场正式版**：官方插件注册表（对齐 dsh-tauri-desk/dsh-tauri-plugins，
   远程 marketplace.json 优先、离线回退编译期内置快照）、GitHub 社区插件搜索
   （Search API，按 star 排序）、仓库 zipball 一键安装（下载 → 解压 → 自动定位
@@ -144,8 +49,49 @@
 - 主界面 ActivityBar 直达插件市场 / 档案管理 / 设置页（同布局内切换）
 - 「dsh 核心版本」管理面板：远端版本安装（GitHub Releases）、本地多版本切换/删除
 - dsh WebUI 未启动面板显示环境自检徽章（Node / dsh 安装状态）
-- RTL 组件测试 14 项（ui 基元、Markdown 消毒、ActivityBar、DshFrame 状态机、TitleBar）
-- `asset_matches_platform` 纯函数与 `tauri.invoke` 白名单单元测试
+- **dsh 日志面板过滤**：级别过滤（all/error/warn/success）+ 关键字
+  大小写不敏感搜索，`filterLogLines` 纯函数 + 组件交互测试
+- **插件 SDK 增强**：`once`（一次性订阅）、`off`（显式反订阅）、
+  `waitForEvent(method, timeoutMs?)`（等待下一次事件，超时 reject）、
+  `onAny`（订阅全部宿主事件，日志/调试插件用）、`httpJson`
+  （`httpRequest` 的 JSON 解析封装，非 2xx reject）；SDK 测试 10 项
+
+#### 纯函数提取与重构
+
+- `parse_plugin_uri`：自定义协议 URI 解析（Windows http 形态 / scheme 形态
+  归一化、缺省 index.html）+ `mime_type` 映射测试
+- `normalize_repo`（owner/repo 归一化、`.git` 剥离、穿越拒绝）
+- `env_message`（环境检查文案，Node 缺失优先）+
+  `resume_plan` / `total_size`（断点续传决策）
+- `ensure_not_duplicate` / `retain_existing`（档案唯一性与删除语义）
+- `compare_versions` 容忍首尾空白与 v 前缀；测试钉住已知局限
+
+#### 测试与质量（Rust 87 / 前端 217）
+
+- **服务层集成测试**（`src-tauri/tests/lifecycle.rs`）：插件全生命周期、
+  档案导入导出、核心多版本切换/删除（e2e 场景 4/5 + 5c）
+- **WebDriver e2e 骨架**（`src-tauri/tests/webdriver_e2e.rs`，reqwest 直连
+  协议零新增依赖，场景 1；`DSH_E2E=1` 按需启用）
+- **宿主桥 PluginBridge 测试（8 项，0% 覆盖起步）**：ping 应答、注册前缀
+  语义、方法转发、错误回传、广播与主题事件
+- **页面/组件测试**：MainPage 集成（横幅/面板坞）、Onboarding 向导流程、
+  SettingsPage 四标签、ProfileManager、CoreManagerPanel/PluginList/
+  UpdatePanel、CliPanel/Sidebar、PluginHost、市场页（官方/预设/社区/
+  详情视图）、DshLogs 过滤、Toaster、Markdown 消毒（XSS 注入面钉死）
+- **安全回归**：zip-slip 逃逸条目跳过、fs 白名单 `..` 拒绝、
+  Permission 权限映射全量、`tauri.invoke` 白名单
+- **store/hook/服务测试**：pluginStore/profileStore 前缀与去重语义、
+  dshStore 状态机与 subscribeEvents、`pingDsh` 三态、`isBridgeRequest`
+  边界、tauriService 错误包装
+- **测试基建**：`tests/helpers/mockTauriService.ts` 共享 mock 工厂
+  （显式导出列表 + 事件订阅 no-op 取消函数 + 后端契约空值兜底）
+
+#### 文档
+
+- ARCHITECTURE.md 新增「3.1 后端事件一览」（5 个事件含 `core://outdated`）
+- PLUGIN_API.md 增补 SDK 事件 API、市场章节、fs `..` 拒绝语义
+- DEVELOPMENT.md 新增「测试编写约定」；e2e README 记录三层覆盖进度
+- TROUBLESHOOTING 新增插件市场与 e2e/WebDriver 排错章节
 
 ### Changed
 - `resolve_active_entry` 解析顺序：托管当前版本 → CLI 全局安装 → 报错
