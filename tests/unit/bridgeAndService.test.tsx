@@ -19,7 +19,12 @@ function makeRequest(id: string, method: string, payload?: unknown): Record<stri
 }
 
 function dispatchBridgeMessage(data: unknown): void {
-  window.dispatchEvent(new MessageEvent("message", { data, source: window }));
+  // 消息来源必须是已注册插件 iframe 的 contentWindow（与 PluginBridge 的来源校验一致）；
+  // beforeEach 中建立的 com.test.p 帧的 contentWindow.postMessage 委托给被 spy 的
+  // window.postMessage，使响应仍可被 postMessageSpy 捕获。
+  const frame = document.querySelector("iframe[data-plugin-frame='com.test.p']");
+  const source = (frame as HTMLIFrameElement | null)?.contentWindow ?? window;
+  window.dispatchEvent(new MessageEvent("message", { data, source }));
 }
 
 /** 建立带 contentWindow 侦听的插件 iframe（广播目标）。 */
@@ -44,6 +49,17 @@ describe("PluginBridge", () => {
     document.body.innerHTML = "";
     pluginBridge.start();
     postMessageSpy = vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
+    // 建立请求来源插件 iframe：isFromPluginFrame 校验要求 event.source 归属某个
+    // data-plugin-frame iframe 的 contentWindow。这里让它的 postMessage 委托给被
+    // spy 的 window.postMessage，从而 dispatchBridgeMessage 发出的请求能通过来源
+    // 校验，且宿主回传的响应仍由 postMessageSpy 捕获。
+    const frame = document.createElement("iframe");
+    frame.setAttribute("data-plugin-frame", "com.test.p");
+    document.body.appendChild(frame);
+    Object.defineProperty(frame, "contentWindow", {
+      value: { postMessage: window.postMessage.bind(window) },
+      configurable: true,
+    });
   });
 
   afterEach(() => {

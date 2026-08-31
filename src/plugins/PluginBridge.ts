@@ -5,6 +5,15 @@ import type { DshStatus } from "@/types/dsh";
 import { usePluginStore } from "@/stores/pluginStore";
 import { useThemeStore } from "@/stores/themeStore";
 
+/** 非插件 iframe 来源的请求：只记日志（tracing 在 devtools 可见），不响应。 */
+function tracing_reject(data: BridgeMessage): void {
+  if (typeof console !== "undefined") {
+    console.warn(
+      `[PluginBridge] 已拒绝非插件 iframe 来源的桥接请求 (pluginId=${data.pluginId}, id=${data.id})`,
+    );
+  }
+}
+
 /**
  * postMessage 桥接（宿主侧）：
  * - 监听插件 iframe 的 req 消息 → 权限校验在 Rust 端 plugin_bridge_call 完成 → 回传 res
@@ -51,8 +60,24 @@ export class PluginBridge {
     this.started = false;
   }
 
+  /** 校验消息来源：仅接受已注册插件 iframe 的 contentWindow，
+   *  防止宿主页面被导航或嵌入外部页面后伪造桥接请求。 */
+  private isFromPluginFrame(source: MessageEvent["source"]): boolean {
+    if (source === null) return false;
+    const frames = Array.from(
+      document.querySelectorAll("iframe[data-plugin-frame]"),
+    );
+    return frames.some(
+      (frame) => (frame as HTMLIFrameElement).contentWindow === source,
+    );
+  }
+
   private onMessage = (event: MessageEvent): void => {
     if (!isBridgeRequest(event.data)) return;
+    if (!this.isFromPluginFrame(event.source)) {
+      tracing_reject(event.data as BridgeMessage);
+      return;
+    }
     const request = event.data as BridgeMessage & { method: BridgeMethod };
     const source = event.source;
     void this.handleRequest(request)
