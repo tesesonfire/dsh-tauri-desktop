@@ -40,12 +40,39 @@ pub fn extract_zip(archive_path: &Path, dest: &Path) -> AppResult<()> {
     Ok(())
 }
 
-/// 解压 tar.gz 到目标目录（tar crate 的 unpack 内建路径穿越防御）。
+/// 解压 tar.gz 到目标目录。
+///
+/// 显式逐条目校验路径（与 zip 分支一致的 zip-slip 防御）：
+/// - 条目含 `..` 父目录组件时直接跳过
+/// - 解析后路径逃逸出目标目录时同样跳过
+///
+/// 不再依赖 `tar::Archive::unpack` 的隐式清理，便于审计与统一告警。
 pub fn extract_tar_gz(archive_path: &Path, dest: &Path) -> AppResult<()> {
     let file = File::open(archive_path)?;
     let decoder = flate2::read::GzDecoder::new(BufReader::new(file));
     let mut tar = tar::Archive::new(decoder);
-    tar.unpack(dest)?;
+    std::fs::create_dir_all(dest)?;
+    for entry in tar.entries()? {
+        let mut entry = entry?;
+        let name = entry.path()?.into_owned();
+        let has_parent_component = name
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir));
+        let out_path = dest.join(&name);
+        if has_parent_component || !out_path.starts_with(dest) {
+            tracing::warn!("跳过越界的 tar 条目: {}", name.display());
+            continue;
+        }
+        if entry.header().entry_type().is_dir() {
+            std::fs::create_dir_all(&out_path)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut out = File::create(&out_path)?;
+            std::io::copy(&mut entry, &mut out)?;
+        }
+    }
     tracing::info!(
         "tar.gz 解压完成: {} -> {}",
         archive_path.display(),
@@ -148,6 +175,54 @@ mod tests {
         assert!(
             dest.join("pkg-0.1.0").join("nested").join("dsh.js").is_file(),
             "嵌套目录结构应完整还原"
+        );
+    }
+
+    #[test]
+    fn extract_tar_gz_skips_traversal_entries() {
+        // zip-slip 防御（tar 分支）：恶意归档可能在原始头字节里塞入 `..`（绕过
+        // tar 构建器的 set_path 校验）。这里手工构造这样的头，验证解压端会跳过。
+        fn raw_tar_header(name: &str, size: u64) -> [u8; 512] {
+            let mut header = [0u8; 512];
+            let nb = name.as_bytes();
+            header[..nb.len().min(100)].copy_from_slice(&nb[..nb.len().min(100)]);
+            header[100..108].copy_from_slice(b"0000644\0");
+            header[108..116].copy_from_slice(b"0000000\0");
+            header[116..124].copy_from_slice(b"0000000\0");
+            header[124..136].copy_from_slice(format!("{:011o}\0", size).as_bytes());
+            header[136..148].copy_from_slice(b"00000000000\0");
+            header[156] = b'0'; // regular file
+            header[148..156].copy_from_slice(b"        ");
+            let cksum: u32 = header.iter().map(|&b| b as u32).sum();
+            header[148..156].copy_from_slice(format!("{:06o}\0 ", cksum).as_bytes());
+            header
+        }
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let tar_path = tmp.path().join("evil.tar.gz");
+        let mut tar_bytes = Vec::new();
+        tar_bytes.extend_from_slice(&raw_tar_header("../escaped.txt", 4));
+        tar_bytes.extend_from_slice(b"evil");
+        tar_bytes.resize(tar_bytes.len() + (512 - 4), 0);
+        tar_bytes.extend_from_slice(&raw_tar_header("safe.txt", 4));
+        tar_bytes.extend_from_slice(b"safe");
+        tar_bytes.resize(tar_bytes.len() + (512 - 4), 0);
+        tar_bytes.resize(tar_bytes.len() + 1024, 0); // EOF marker
+        let mut gz = Vec::new();
+        {
+            let mut enc =
+                flate2::write::GzEncoder::new(&mut gz, flate2::Compression::default());
+            std::io::Write::write_all(&mut enc, &tar_bytes).expect("write");
+            enc.finish().expect("finish");
+        }
+        std::fs::write(&tar_path, &gz).expect("write gz");
+
+        let dest = tmp.path().join("out");
+        extract_tar_gz(&tar_path, &dest).expect("extract");
+        assert!(dest.join("safe.txt").is_file(), "安全条目应正常解压");
+        assert!(
+            !tmp.path().join("escaped.txt").exists(),
+            "逃逸文件不得写到目标目录之外"
         );
     }
 }

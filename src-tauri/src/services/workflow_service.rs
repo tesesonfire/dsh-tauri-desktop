@@ -241,6 +241,28 @@ impl DshProcessManager {
         path::ensure_dir(&dsh_home)?;
         path::ensure_dir(&path::logs_dir())?;
 
+        // 端口占用预检：端口被占用时给出明确报错，而非让 dsh 崩溃后空转重启。
+        if !is_port_available(&host, port) {
+            let msg = format!(
+                "端口 {port} 已被占用，dsh 无法启动。请在设置 → dsh 配置中更换端口，或释放占用进程（netstat -ano | findstr {port} / lsof -i:{port}）。"
+            );
+            tracing::error!("{msg}");
+            self.set_status(|s| {
+                *s = DshStatus {
+                    state: DshState::Error,
+                    pid: None,
+                    port,
+                    host: host.clone(),
+                    profile: profile.clone(),
+                    restarts,
+                    last_error: Some(msg.clone()),
+                    started_at: Some(chrono::Utc::now().to_rfc3339()),
+                };
+            });
+            let _ = app.emit(STATE_EVENT, self.status());
+            return Err(AppError::Message(msg));
+        }
+
         self.set_status(|s| {
             *s = DshStatus {
                 state: DshState::Starting,
@@ -356,7 +378,11 @@ impl DshProcessManager {
             tracing::info!("dsh 子进程已终止");
         }
         self.set_status(|s| {
-            s.state = DshState::Stopped;
+            // 仅从 Stopping 正常迁移到 Stopped；保留 Error 状态，
+            // 避免健康检查超时等错误路径调用 stop() 后把 Error 降级为 Stopped。
+            if s.state == DshState::Stopping {
+                s.state = DshState::Stopped;
+            }
             s.pid = None;
         });
         let _ = app.emit(STATE_EVENT, self.status());
@@ -470,6 +496,15 @@ async fn check_endpoint(url: &str) -> bool {
         Ok(Ok(resp)) => resp.status().as_u16() < 500,
         _ => false,
     }
+}
+
+/// 端口占用预检：尝试 bind 探测端口是否可用。
+///
+/// 避免 dsh 子进程因 EADDRINUSE 立即崩溃后陷入无意义的重启循环。
+/// 存在 TOCTOU 窗口（bind 后释放，dsh 再 bind），但能拦截最常见的
+/// 「端口已被占用」场景并给出明确报错而非泛化的崩溃日志。
+fn is_port_available(host: &str, port: u16) -> bool {
+    std::net::TcpListener::bind((host, port)).is_ok()
 }
 
 /// 崩溃看护：轮询子进程退出；崩溃时按 2^n 秒退避自动重启（上限 MAX_RESTARTS）。
