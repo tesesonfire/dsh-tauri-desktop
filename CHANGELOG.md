@@ -66,7 +66,7 @@
 - `ensure_not_duplicate` / `retain_existing`（档案唯一性与删除语义）
 - `compare_versions` 容忍首尾空白与 v 前缀；测试钉住已知局限
 
-#### 测试与质量（Rust 87 / 前端 223）
+#### 测试与质量（Rust 87 / 前端 226）
 
 - **服务层集成测试**（`src-tauri/tests/lifecycle.rs`）：插件全生命周期、
   档案导入导出、核心多版本切换/删除（e2e 场景 4/5 + 5c）、CLI 状态
@@ -81,6 +81,8 @@
   详情视图）、DshLogs 过滤、Toaster、Markdown 消毒（XSS 注入面钉死）
 - **安全回归**：zip-slip 逃逸条目跳过、fs 白名单 `..` 拒绝、
   Permission 权限映射全量、`tauri.invoke` 白名单
+- **useDshProcess/usePluginSystem hook 测试**：挂载订阅与刷新副作用、
+  start/stop/restart 委托、启用/卸载 Toast 反馈与错误降级
 - **store/hook/服务测试**：pluginStore/profileStore 前缀与去重语义、
   dshStore 状态机与 subscribeEvents、`pingDsh` 三态、`isBridgeRequest`
   边界、tauriService 错误包装

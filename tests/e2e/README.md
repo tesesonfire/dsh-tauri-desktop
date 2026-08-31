@@ -45,3 +45,5 @@ cargo test --test webdriver_e2e
 - 场景 6-lite（`tests/unit/panels2.test.tsx` UpdatePanel 组）：检查更新
   「已最新」/「发现新版本+更新日志」/「失败降级为错误 Toast 且面板可重试」、
   下载应用后进入「立即重启」状态。
+- 场景 7-lite（`src-tauri/tests/lifecycle.rs` CLI 段）：shim 写入前后
+  `cli_status` 的两态语义（真实 PATH 注册与终端验证仍需人工走查）。
