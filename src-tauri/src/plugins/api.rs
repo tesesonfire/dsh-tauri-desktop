@@ -34,6 +34,34 @@ const GIT_ALLOWED_SUBCOMMANDS: &[&str] = &[
     "commit", "fetch", "pull", "push",
 ];
 
+/// shell 解释器：插件不得直接拉起（绕过按命令名的白名单模型）。
+const SHELL_INTERPRETERS: &[&str] = &[
+    "sh", "bash", "dash", "zsh", "fish", "powershell", "pwsh", "cmd", "cmd.exe",
+];
+
+/// 受保护文件名：插件 fs.write 绝对禁止写入（按文件名匹配，覆盖 ~/.dsh 下所有目录）。
+///
+/// - `manifest.json`：运行时每次桥接调用都会重读 manifest（`runtime::execute`），
+///   插件覆写自身 manifest 即可在下一次调用时获得新权限 —— 直接的权限自提升。
+/// - `settings.json`：含 exec/fs 白名单与代理，覆写即可放宽安全边界。
+/// - `plugin-state.json`：含插件启用状态，覆写即可绕过「禁用」。
+/// - `profiles.json`：档案列表，覆写可注入恶意档案指向任意目录。
+const PROTECTED_FILENAMES: &[&str] = &[
+    "manifest.json",
+    "settings.json",
+    "plugin-state.json",
+    "profiles.json",
+];
+
+/// 判断目标路径是否指向受保护文件（仅按文件名匹配）。
+fn is_protected_write_target(target: &std::path::Path) -> bool {
+    target
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| PROTECTED_FILENAMES.contains(&name))
+        .unwrap_or(false)
+}
+
 /// fs 白名单：默认 `~/.dsh` + 用户扩展。
 pub fn effective_fs_allowlist() -> Vec<String> {
     let settings = crate::models::settings::AppSettings::load(&path::settings_file());
@@ -61,10 +89,17 @@ fn require_permission(manifest: &Manifest, permission: Permission) -> AppResult<
 }
 
 fn dangerous_argument(args: &[String]) -> bool {
-    let joined = args.join(" ").to_lowercase();
+    // 折叠连续空白（含 tab/多空格）后再匹配，对抗 `rm  -rf  /` 类绕过；
+    // 跨参数拼接场景（如 ["rm -rf", "/"]）也由 join + 折叠统一覆盖。
+    let normalized = args
+        .join(" ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
     DANGEROUS_PATTERNS
         .iter()
-        .any(|pattern| joined.contains(pattern))
+        .any(|pattern| normalized.contains(pattern))
 }
 
 // ---------- fs ----------
@@ -94,6 +129,14 @@ pub fn fs_write(manifest: &Manifest, params: &Value) -> AppResult<Value> {
         .and_then(Value::as_str)
         .unwrap_or_default();
     let target = std::path::Path::new(file);
+    // 受保护文件绝对禁止写入：manifest/settings/插件状态/档案列表。
+    // 即使路径落在 fs 白名单内（默认 ~/.dsh/**）也拒绝 —— 防止插件通过覆写
+    // manifest 自提升权限，或篡改 settings 放宽 exec/fs 白名单。
+    if is_protected_write_target(target) {
+        return Err(AppError::InvalidInput(format!(
+            "禁止写入受保护文件: {file}（manifest/settings/插件状态/档案列表不可由插件覆写）"
+        )));
+    }
     if !super::loader::path_in_allowlist(target, &effective_fs_allowlist()) {
         return Err(AppError::InvalidInput(format!("路径不在白名单内: {file}")));
     }
@@ -129,6 +172,17 @@ pub fn exec_run(manifest: &Manifest, params: &Value) -> AppResult<Value> {
         return Err(AppError::InvalidInput(format!(
             "命令 {command} 不在允许列表中"
         )));
+    }
+    // 硬拒绝 shell 解释器：允许插件拉起 shell 等价于放开任意命令执行，
+    // 与「按命令名白名单」的权限模型冲突（即使用户显式加入白名单也拒绝）。
+    let command_exe = std::path::Path::new(&command)
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    if SHELL_INTERPRETERS.contains(&command_exe.as_str()) {
+        return Err(AppError::InvalidInput(
+            "不允许通过插件执行 shell 解释器（避免绕过命令白名单）".into(),
+        ));
     }
     if dangerous_argument(&args) {
         return Err(AppError::InvalidInput("检测到危险命令参数，已拒绝执行".into()));
@@ -327,6 +381,43 @@ mod tests {
         assert!(dangerous_argument(&["rm".into(), "-rf".into(), "/".into()]));
         assert!(dangerous_argument(&["shutdown".into(), "/s".into()]));
         assert!(!dangerous_argument(&["status".into()]));
+        // 空白绕过：单参数内多空格 / tab 分隔仍应命中
+        assert!(dangerous_argument(&["rm  -rf  /".into()]));
+        assert!(dangerous_argument(&["rm\t-rf\t/".into()]));
+        assert!(dangerous_argument(&["rm".into(), "-rf".into(), "  /  ".into()]));
+    }
+
+    #[test]
+    fn protected_files_detected() {
+        assert!(is_protected_write_target(std::path::Path::new(
+            "~/.dsh/plugins/x/manifest.json"
+        )));
+        assert!(is_protected_write_target(std::path::Path::new(
+            "C:/Users/u/.dsh/settings.json"
+        )));
+        assert!(is_protected_write_target(std::path::Path::new(
+            "plugin-state.json"
+        )));
+        assert!(is_protected_write_target(std::path::Path::new(
+            "profiles.json"
+        )));
+        // 普通数据文件不受保护
+        assert!(!is_protected_write_target(std::path::Path::new(
+            "~/.dsh/storage/x.json"
+        )));
+        assert!(!is_protected_write_target(std::path::Path::new("notes.txt")));
+    }
+
+    #[test]
+    fn fs_write_rejects_protected_files() {
+        let m = manifest_with(&[Permission::Fs]);
+        // manifest.json：即便有 fs 权限也禁止覆写（防止权限自提升）
+        let err = fs_write(&m, &json!({ "path": "manifest.json", "content": "x" }))
+            .expect_err("manifest protected");
+        assert!(err.to_string().contains("受保护文件"));
+        let err = fs_write(&m, &json!({ "path": "settings.json", "content": "x" }))
+            .expect_err("settings protected");
+        assert!(err.to_string().contains("受保护文件"));
     }
 
     #[test]
