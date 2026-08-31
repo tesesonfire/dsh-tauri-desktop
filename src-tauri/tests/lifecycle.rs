@@ -187,6 +187,39 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
     assert!(!path::dependencies_dir().join("0.2.0").exists());
     assert!(core_service::remove_version("0.2.0").is_err(), "重复删除应 NotFound");
 
+    // ---------- 场景 7-lite：CLI 状态读取（不做真实 PATH 注册，只读语义） ----------
+    // shim 不存在 → installed=false；写入 shim 文件 → installed=true 并带路径
+    let status_before = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("rt")
+        .block_on(dsh_tauri_desktop::services::cli_service::status());
+    assert!(
+        !status_before.installed,
+        "未写 shim 时 status 应报告未安装"
+    );
+    let bin_dir = path::bin_dir();
+    std::fs::create_dir_all(&bin_dir).expect("mkdir bin");
+    let shim_file = bin_dir.join("dsh.cmd");
+    std::fs::write(&shim_file, "@echo off\r\ndsh.cmd-entry\r\n").expect("write shim");
+    let status_after = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("rt")
+        .block_on(dsh_tauri_desktop::services::cli_service::status());
+    assert!(status_after.installed, "shim 存在时应报告已安装");
+    assert!(status_after.shim_path.is_some());
+    assert!(status_after.message.contains("就绪"));
+
+    // ---------- 场景 5d：档案切换写入 settings.activeProfile 并持久化 ----------
+    dsh_tauri_desktop::commands::profile::profile_switch("it-profile-2".into())
+        .expect("switch profile");
+    let reloaded = AppSettings::load(&path::settings_file());
+    assert_eq!(reloaded.active_profile, "it-profile-2", "切换应持久化到设置");
+    // 回读 CLI 状态的调用方依赖（profile_active 等价读取路径）
+    assert_eq!(
+        dsh_tauri_desktop::commands::profile::profile_active(),
+        "it-profile-2"
+    );
+
     // ---------- 恢复环境 ----------
     match previous {
         Some(value) => std::env::set_var("DSH_HOME", value),

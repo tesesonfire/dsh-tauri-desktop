@@ -66,10 +66,11 @@
 - `ensure_not_duplicate` / `retain_existing`（档案唯一性与删除语义）
 - `compare_versions` 容忍首尾空白与 v 前缀；测试钉住已知局限
 
-#### 测试与质量（Rust 87 / 前端 217）
+#### 测试与质量（Rust 87 / 前端 223）
 
 - **服务层集成测试**（`src-tauri/tests/lifecycle.rs`）：插件全生命周期、
-  档案导入导出、核心多版本切换/删除（e2e 场景 4/5 + 5c）
+  档案导入导出、核心多版本切换/删除（e2e 场景 4/5 + 5c）、CLI 状态
+  读取两态（shim 写入前后）与档案切换持久化（场景 7-lite / 5d）
 - **WebDriver e2e 骨架**（`src-tauri/tests/webdriver_e2e.rs`，reqwest 直连
   协议零新增依赖，场景 1；`DSH_E2E=1` 按需启用）
 - **宿主桥 PluginBridge 测试（8 项，0% 覆盖起步）**：ping 应答、注册前缀
