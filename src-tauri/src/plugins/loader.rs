@@ -248,6 +248,26 @@ mod tests {
         std::fs::create_dir_all(&base).expect("mkdir");
         let target = base.join("sub/file.txt");
         let list = vec![base.to_string_lossy().into_owned()];
+        // CI 诊断：打印 runner 上真实路径形态（临时定位 allowlist 误判根因）
+        println!("DBG tmp={:?}", tmp.path());
+        println!("DBG canon_base={:?}", base.canonicalize());
+        println!("DBG norm_target={:?}", normalize_existing(&target));
+        println!(
+            "DBG norm_allowed={:?}",
+            normalize_existing(std::path::Path::new(&list[0]))
+        );
+        println!(
+            "DBG comps_target={:?}",
+            normalize_existing(&target)
+                .components()
+                .collect::<Vec<_>>()
+        );
+        println!(
+            "DBG comps_allowed={:?}",
+            normalize_existing(std::path::Path::new(&list[0]))
+                .components()
+                .collect::<Vec<_>>()
+        );
         assert!(path_in_allowlist(&target, &list));
         let outside = tmp.path().join("other.txt");
         assert!(!path_in_allowlist(&outside, &list));
