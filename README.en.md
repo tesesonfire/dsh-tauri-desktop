@@ -7,8 +7,8 @@
 
 > Language: [中文](README.md) | **English**
 
-**A native Tauri 2 desktop shell for dsh (DeepSeek Harness).** Installer < 10 MB, zero
-environment dependencies (no pre-installed Node.js / Docker required) — download and run.
+**A native Tauri 2 desktop shell for dsh (DeepSeek Harness).** Zero environment
+dependencies (no pre-installed Node.js / Docker required) — download and run.
 
 ## ✨ Features
 
@@ -42,11 +42,15 @@ environment dependencies (no pre-installed Node.js / Docker required) — downlo
 Download the installer for your platform from
 [Releases](https://github.com/tesesonfire/dsh-tauri-desktop/releases):
 
-| Platform | Format | Requirements |
-|---|---|---|
-| Windows 10+ | `.exe` (NSIS) | WebView2 (built-in) |
-| macOS 10.15+ | `.dmg` (Universal) | — |
-| Linux | `.AppImage` / `.deb` | WebKitGTK 4.1 |
+| Platform | Format | Approx. size | Requirements |
+|---|---|---|---|
+| Windows 10+ | `.exe` (NSIS) | ~4 MB | WebView2 (built-in) |
+| macOS 10.15+ | `.dmg` (Universal) | ~11 MB | — |
+| Linux | `.AppImage` / `.deb` | ~82 MB / ~7 MB | WebKitGTK 4.1 |
+
+> The Linux AppImage is larger because it bundles the WebKitGTK runtime for a fully
+> self-contained package with no extra dependencies; the `.deb` is ~7 MB (uses the
+> system WebKitGTK).
 
 ### First launch
 

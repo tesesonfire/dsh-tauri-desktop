@@ -7,7 +7,7 @@
 
 > 语言 / Language：**中文** | [English](README.en.md)
 
-**dsh（DeepSeek Harness）的 Tauri 2 原生桌面壳。** 安装包 < 10MB、零环境依赖（无需预装 Node.js / Docker），下载即用。
+**dsh（DeepSeek Harness）的 Tauri 2 原生桌面壳。** 零环境依赖（无需预装 Node.js / Docker），下载即用。
 
 ## ✨ 功能
 
@@ -25,11 +25,13 @@
 
 从 [Releases](https://github.com/tesesonfire/dsh-tauri-desktop/releases) 下载对应平台安装包：
 
-| 平台 | 格式 | 要求 |
-|---|---|---|
-| Windows 10+ | `.exe`（NSIS） | WebView2（系统自带） |
-| macOS 10.15+ | `.dmg`（Universal） | — |
-| Linux | `.AppImage` / `.deb` | WebKitGTK 4.1 |
+| 平台 | 格式 | 大致体积 | 要求 |
+|---|---|---|---|
+| Windows 10+ | `.exe`（NSIS） | ~4 MB | WebView2（系统自带） |
+| macOS 10.15+ | `.dmg`（Universal） | ~11 MB | — |
+| Linux | `.AppImage` / `.deb` | ~82 MB / ~7 MB | WebKitGTK 4.1 |
+
+> Linux 的 AppImage 较大是因为内置了 WebKitGTK 运行时，实现完全自包含、无需额外依赖；选用 `.deb` 体积仅约 7 MB（依赖系统 WebKitGTK）。
 
 ### 首次启动
 
