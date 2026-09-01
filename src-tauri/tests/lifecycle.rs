@@ -188,7 +188,20 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
     assert!(core_service::remove_version("0.2.0").is_err(), "重复删除应 NotFound");
 
     // ---------- 场景 7-lite：CLI 状态读取（不做真实 PATH 注册，只读语义） ----------
-    // shim 不存在 → installed=false；写入 shim 文件 → installed=true 并带路径
+    // shim 路径必须与 cli_service::status 的查询位置一致：
+    // Windows → $DSH_HOME/bin/dsh.cmd（bin_dir 尊重 DSH_HOME 临时目录）；
+    // Unix   → ~/.local/bin/dsh（真实主目录，产品语义见 docs/CLI.md）。
+    #[cfg(windows)]
+    let (shim_dir, shim_name) = (path::bin_dir(), "dsh.cmd");
+    #[cfg(not(windows))]
+    let (shim_dir, shim_name) = (
+        dirs::home_dir().expect("home dir").join(".local").join("bin"),
+        "dsh",
+    );
+    let shim_file = shim_dir.join(shim_name);
+    // Unix 查询的是真实主目录：先清掉可能残留的 shim，保证「未安装」起点
+    #[cfg(not(windows))]
+    let _ = std::fs::remove_file(&shim_file);
     let status_before = tokio::runtime::Builder::new_current_thread()
         .build()
         .expect("rt")
@@ -197,9 +210,7 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
         !status_before.installed,
         "未写 shim 时 status 应报告未安装"
     );
-    let bin_dir = path::bin_dir();
-    std::fs::create_dir_all(&bin_dir).expect("mkdir bin");
-    let shim_file = bin_dir.join("dsh.cmd");
+    std::fs::create_dir_all(&shim_dir).expect("mkdir shim dir");
     std::fs::write(&shim_file, "@echo off\r\ndsh.cmd-entry\r\n").expect("write shim");
     let status_after = tokio::runtime::Builder::new_current_thread()
         .build()
@@ -221,6 +232,9 @@ fn plugin_lifecycle_and_settings_persistence_end_to_end()
     );
 
     // ---------- 恢复环境 ----------
+    // Unix 上写入的是真实主目录的 shim，测试结束必须清理
+    #[cfg(not(windows))]
+    let _ = std::fs::remove_file(&shim_file);
     match previous {
         Some(value) => std::env::set_var("DSH_HOME", value),
         None => std::env::remove_var("DSH_HOME"),
