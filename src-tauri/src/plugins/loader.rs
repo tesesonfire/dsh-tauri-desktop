@@ -125,7 +125,7 @@ pub fn path_in_allowlist(target: &Path, allowlist: &[String]) -> bool {
     let normalized = normalize_existing(target);
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"));
     allowlist.iter().any(|allowed| {
-        let allowed_path = PathBuf::from(allowed.replace('~', &home.to_string_lossy()));
+        let allowed_path = PathBuf::from(expand_leading_tilde(allowed, &home.to_string_lossy()));
         let allowed_normalized = normalize_existing(&allowed_path);
         if cfg!(windows) {
             path_starts_with_ci(&normalized, &allowed_normalized)
@@ -174,6 +174,24 @@ fn strip_win_prefix(path: PathBuf) -> PathBuf {
         Some(stripped) => PathBuf::from(stripped.to_string()),
         None => path,
     }
+}
+
+/// 仅展开开头的波浪号（`~`、`~/x`、`~\x` → home 形态）。
+///
+/// 不能用 `str::replace('~', home)`：那会把路径中段组件里的字面 `~` 一并替换
+/// （Windows 8.3 短名如 `C:\Users\RUNNER~1` 或 `MYDOCU~1` 都含 `~`），
+/// 静默毁掉整条白名单条目。
+fn expand_leading_tilde(input: &str, home: &str) -> String {
+    if input == "~" {
+        return home.to_string();
+    }
+    if let Some(rest) = input.strip_prefix("~/") {
+        return format!("{home}/{rest}");
+    }
+    if let Some(rest) = input.strip_prefix("~\\") {
+        return format!("{home}\\{rest}");
+    }
+    input.to_string()
 }
 
 /// Windows 下大小写不敏感的组件级前缀比较（NTFS 语义）。
@@ -248,30 +266,25 @@ mod tests {
         std::fs::create_dir_all(&base).expect("mkdir");
         let target = base.join("sub/file.txt");
         let list = vec![base.to_string_lossy().into_owned()];
-        // CI 诊断：打印 runner 上真实路径形态（临时定位 allowlist 误判根因）
-        println!("DBG tmp={:?}", tmp.path());
-        println!("DBG canon_base={:?}", base.canonicalize());
-        println!("DBG norm_target={:?}", normalize_existing(&target));
-        println!(
-            "DBG norm_allowed={:?}",
-            normalize_existing(std::path::Path::new(&list[0]))
-        );
-        println!(
-            "DBG comps_target={:?}",
-            normalize_existing(&target)
-                .components()
-                .collect::<Vec<_>>()
-        );
-        println!(
-            "DBG comps_allowed={:?}",
-            normalize_existing(std::path::Path::new(&list[0]))
-                .components()
-                .collect::<Vec<_>>()
-        );
         assert!(path_in_allowlist(&target, &list));
         let outside = tmp.path().join("other.txt");
         assert!(!path_in_allowlist(&outside, &list));
         assert!(!path_in_allowlist(&outside, &[]));
+    }
+
+    #[test]
+    fn allowlist_leaves_literal_tilde_in_components_alone() {
+        // CI Windows 回归（产品级 bug）：白名单条目路径组件里的字面 `~` 不是
+        // 主目录引用（如 `C:\Users\RUNNER~1`、`MYDOCU~1`），旧实现用
+        // replace('~', home) 会把整条改写成垃圾串导致白名单永远不命中。
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let base = tmp.path().join("RUNNER~1").join("base");
+        std::fs::create_dir_all(&base).expect("mkdir");
+        let list = vec![base.to_string_lossy().into_owned()];
+        assert!(
+            path_in_allowlist(&base.join("sub/file.txt"), &list),
+            "组件中的字面 ~ 不得被当作主目录展开"
+        );
     }
 
     #[test]
@@ -283,6 +296,15 @@ mod tests {
         assert!(path_in_allowlist(&inside, &list), "~ 路径应匹配主目录下的目标");
         let outside = home.join("Documents").join("secret.txt");
         assert!(!path_in_allowlist(&outside, &list), "主目录外目标不匹配");
+        // expand_leading_tilde 的边界形态
+        let h = home.to_string_lossy().into_owned();
+        assert_eq!(expand_leading_tilde("~", &h), h);
+        assert_eq!(expand_leading_tilde("~/.dsh", &h), format!("{h}/.dsh"));
+        assert_eq!(expand_leading_tilde(r"~\.dsh", &h), format!(r"{h}\.dsh"));
+        assert_eq!(
+            expand_leading_tilde(r"C:\Users\RUNNER~1\base", &h),
+            r"C:\Users\RUNNER~1\base"
+        );
     }
 
     #[test]
