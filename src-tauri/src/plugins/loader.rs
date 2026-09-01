@@ -127,9 +127,14 @@ pub fn path_in_allowlist(target: &Path, allowlist: &[String]) -> bool {
     allowlist.iter().any(|allowed| {
         let allowed_path = PathBuf::from(expand_leading_tilde(allowed, &home.to_string_lossy()));
         let allowed_normalized = normalize_existing(&allowed_path);
-        if cfg!(windows) {
+        // 编译期分派：运行时 cfg! 会让两个分支都参与编译，
+        // Unix 上找不到 windows-only 的 path_starts_with_ci（CI E0425）
+        #[cfg(windows)]
+        {
             path_starts_with_ci(&normalized, &allowed_normalized)
-        } else {
+        }
+        #[cfg(not(windows))]
+        {
             normalized.starts_with(&allowed_normalized)
         }
     })
