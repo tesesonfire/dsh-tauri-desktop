@@ -127,21 +127,39 @@ pub fn path_in_allowlist(target: &Path, allowlist: &[String]) -> bool {
     allowlist.iter().any(|allowed| {
         let allowed_path = PathBuf::from(allowed.replace('~', &home.to_string_lossy()));
         let allowed_normalized = normalize_existing(&allowed_path);
-        normalized.starts_with(&allowed_normalized)
+        if cfg!(windows) {
+            path_starts_with_ci(&normalized, &allowed_normalized)
+        } else {
+            normalized.starts_with(&allowed_normalized)
+        }
     })
 }
 
-/// 规范化路径：优先 canonicalize（存在的路径），否则规范化其存在的父目录；
-/// Windows 下去掉 canonicalize 产生的 `\\?\` 扩展前缀，保证 starts_with 可比。
+/// 规范化路径：优先 canonicalize（存在的路径）；目标不存在时向上找到最近的
+/// 存在祖先做 canonicalize，再拼回其余组件。仅比较「存在的直接父目录」会在
+/// Windows 上被 8.3 短文件名（如 `RUNNER~1`）或大小写差异击穿——同一真实
+/// 目录的两种文本形态组件不相等，导致白名单误判。Windows 下去掉
+/// canonicalize 产生的 `\\?\` / `\\?\UNC\` 扩展前缀，保证 starts_with 可比。
 fn normalize_existing(path: &Path) -> PathBuf {
     if let Ok(canonical) = path.canonicalize() {
         return strip_win_prefix(canonical);
     }
-    if let Some(parent) = path.parent() {
-        if let Ok(parent_canonical) = parent.canonicalize() {
-            if let Some(name) = path.file_name() {
-                return strip_win_prefix(parent_canonical).join(name);
+    let mut rest: Vec<std::ffi::OsString> = Vec::new();
+    let mut cursor = path;
+    while let Some(parent) = cursor.parent() {
+        if parent == cursor {
+            break;
+        }
+        if let Some(name) = cursor.file_name() {
+            rest.push(name.to_os_string());
+        }
+        cursor = parent;
+        if let Ok(canonical) = cursor.canonicalize() {
+            let mut result = strip_win_prefix(canonical);
+            for component in rest.iter().rev() {
+                result.push(component);
             }
+            return result;
         }
     }
     strip_win_prefix(path.to_path_buf())
@@ -149,9 +167,39 @@ fn normalize_existing(path: &Path) -> PathBuf {
 
 fn strip_win_prefix(path: PathBuf) -> PathBuf {
     let text = path.as_os_str().to_string_lossy();
+    if let Some(stripped) = text.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{stripped}"));
+    }
     match text.strip_prefix(r"\\?\") {
         Some(stripped) => PathBuf::from(stripped.to_string()),
         None => path,
+    }
+}
+
+/// Windows 下大小写不敏感的组件级前缀比较（NTFS 语义）。
+/// Unix 文件系统大小写敏感，保持 `Path::starts_with` 精确比较。
+#[cfg(windows)]
+fn path_starts_with_ci(path: &Path, base: &Path) -> bool {
+    let mut target = path.components();
+    let mut prefix = base.components();
+    loop {
+        match (prefix.next(), target.next()) {
+            (None, _) => return true,
+            (Some(base_component), Some(target_component)) => {
+                let equal = base_component == target_component
+                    || match (
+                        base_component.as_os_str().to_str(),
+                        target_component.as_os_str().to_str(),
+                    ) {
+                        (Some(b), Some(t)) => b.eq_ignore_ascii_case(t),
+                        _ => false,
+                    };
+                if !equal {
+                    return false;
+                }
+            }
+            (Some(_), None) => return false,
+        }
     }
 }
 
@@ -235,6 +283,47 @@ mod tests {
         let list = vec!["Z:/nonexistent-dsh-root".to_string()];
         let target = PathBuf::from("Z:/nonexistent-dsh-root/a/b.txt");
         assert!(path_in_allowlist(&target, &list));
+    }
+
+    #[test]
+    fn normalize_resolves_via_nearest_existing_ancestor() {
+        // CI Windows 回归：target 的多级父目录不存在（base\sub\file.txt，仅 base
+        // 存在）时，旧实现只尝试直接父目录后整体回退原样文本，与 canonicalize
+        // 后的 base（长名/规范化形态）组件不相等 → 白名单误判 false。
+        // 新实现向上找到最近存在祖先 canonicalize 再拼回剩余组件。
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let base = tmp.path().join("base3");
+        std::fs::create_dir_all(&base).expect("mkdir");
+        let target = base.join("sub/deep/file.txt");
+        let list = vec![base.to_string_lossy().into_owned()];
+        assert!(path_in_allowlist(&target, &list));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn path_prefix_compare_is_case_insensitive_on_windows() {
+        assert!(path_starts_with_ci(
+            Path::new(r"C:\Users\Demo\dsh\a.txt"),
+            Path::new(r"c:\users\demo\dsh")
+        ));
+        assert!(!path_starts_with_ci(
+            Path::new(r"C:\Users\Other\a.txt"),
+            Path::new(r"C:\Users\Demo\dsh")
+        ));
+        // 组件边界：字符串前缀相同但不是同一目录
+        assert!(!path_starts_with_ci(
+            Path::new(r"C:\Users\Demo\dsh-evil\a.txt"),
+            Path::new(r"C:\Users\Demo\dsh")
+        ));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn strip_win_prefix_handles_verbatim_unc() {
+        assert_eq!(
+            strip_win_prefix(PathBuf::from(r"\\?\UNC\server\share\x")),
+            PathBuf::from(r"\\server\share\x")
+        );
     }
 
     #[test]
